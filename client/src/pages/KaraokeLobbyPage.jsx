@@ -1,0 +1,66 @@
+import { Music, Plus } from 'lucide-react';
+import { useState } from 'react';
+import CreateRoomModal from '../components/CreateRoomModal';
+import { YearFilter } from '../components/Filters';
+import RoomCard from '../components/RoomCard';
+import { Button, EmptyState, Spinner } from '../components/ui';
+import { useLobbyRooms } from '../hooks/useLobbyRooms';
+
+const KaraokeLobbyPage = () => {
+  const [year, setYear] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const { rooms, loading } = useLobbyRooms({ year, type: 'karaoke' });
+
+  return (
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-(--radius-card) bg-gradient-to-br from-beak-400 via-duck-400 to-duck-300 p-6 text-[#3B2F1E] sm:p-8">
+        <p className="font-semibold opacity-80">Duck Karaoke Lounge</p>
+        <h1 className="mt-1 max-w-md text-3xl font-medium">เหนื่อยนักก็มาร้องเพลงกัน</h1>
+        <p className="mt-2 max-w-md opacity-80">
+          เปิดเพลงจาก YouTube ฟังพร้อมกันทั้งห้อง จะร้องเสียงดังหรือแค่ส่งสติกเกอร์เชียร์ก็ได้
+        </p>
+        <Button variant="calm" icon={Plus} className="mt-5" onClick={() => setCreating(true)}>
+          เปิดห้องคาราโอเกะ
+        </Button>
+        <img
+          src="/duck.svg"
+          alt=""
+          className="pointer-events-none absolute -right-4 -bottom-6 h-24 w-24 -rotate-6 opacity-90 select-none sm:h-36 sm:w-36"
+        />
+      </section>
+
+      <YearFilter value={year} onChange={setYear} />
+
+      {loading ? (
+        <div className="flex justify-center py-12 text-muted">
+          <Spinner />
+        </div>
+      ) : rooms.length === 0 ? (
+        <EmptyState
+          icon={Music}
+          title="ยังไม่มีห้องคาราโอเกะเปิดอยู่"
+          action={<Button onClick={() => setCreating(true)}>เปิดห้องแรก</Button>}
+        >
+          เปิดห้องแล้วชวนเพื่อน ๆ มาร้องด้วยกัน
+        </EmptyState>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {rooms.map((room) => (
+            <RoomCard key={room.id} room={room} />
+          ))}
+        </div>
+      )}
+
+      <CreateRoomModal
+        key={creating ? 'open' : 'closed'}
+        open={creating}
+        onClose={() => setCreating(false)}
+        defaultType="karaoke"
+        defaultYear={year}
+        types={['karaoke']}
+      />
+    </div>
+  );
+};
+
+export default KaraokeLobbyPage;

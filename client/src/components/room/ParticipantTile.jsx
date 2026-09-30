@@ -1,0 +1,76 @@
+// ตัวแทนผู้ใช้ในห้อง: อวาตาร์เป็ด + วงคลื่นเรืองแสงเมื่อกำลังพูด + สถานะไมค์
+import { Crown, MicOff } from 'lucide-react';
+import { SPEAKING_THRESHOLD } from '../../lib/rtc/levels';
+import DuckAvatar from '../DuckAvatar';
+import { ReportButton } from '../ReportModal';
+import VolumeControl from './VolumeControl';
+
+const ParticipantTile = ({
+  member,
+  isMe,
+  isHost,
+  level = 0,
+  online = true,
+  connecting = false,
+  size = 88,
+  compact = false,
+}) => {
+  const speaking = !member.isMuted && level > SPEAKING_THRESHOLD;
+  const status = !online ? 'หลุดการเชื่อมต่อ' : connecting ? 'กำลังเชื่อมต่อเสียง…' : '';
+  return (
+    <div
+      className={`group relative flex flex-col items-center gap-2 rounded-(--radius-card) text-center ${compact ? 'p-2' : 'p-3'}`}
+    >
+      <div className="relative">
+        <DuckAvatar
+          avatar={member.avatar}
+          size={size}
+          speaking={speaking}
+          level={level}
+          dimmed={!online}
+          label={member.nickname}
+        />
+        {member.isMuted && (
+          <span
+            className="absolute -right-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full bg-danger text-white ring-4 ring-bg"
+            title="ปิดไมค์"
+          >
+            <MicOff size={16} />
+          </span>
+        )}
+        {isHost && (
+          <span
+            className="absolute -top-2 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-duck-400 text-[#3B2F1E] ring-4 ring-bg"
+            title="เจ้าของห้อง"
+          >
+            <Crown size={14} />
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 max-w-full">
+        <p className="truncate font-semibold">
+          {member.nickname}
+          {isMe && <span className="font-normal text-muted"> (คุณ)</span>}
+        </p>
+        {/* แบบย่อ (ห้องคาราโอเกะ) ช่องแคบ: สถานะอยู่บรรทัดเดียวแล้วตัดด้วย … ดูเต็มได้จาก title */}
+        <p
+          className={`text-xs text-muted ${compact ? 'truncate' : ''}`}
+          title={status || undefined}
+        >
+          ปี {member.year}
+          {status && ` · ${status}`}
+        </p>
+      </div>
+      {!isMe && <VolumeControl member={member} />}
+      {!isMe && (
+        <ReportButton
+          target={{ type: 'user', id: member.userId, label: member.nickname }}
+          size={32}
+          className="absolute top-1 right-1 opacity-60 group-hover:opacity-100 sm:opacity-0 sm:focus-visible:opacity-100"
+        />
+      )}
+    </div>
+  );
+};
+
+export default ParticipantTile;

@@ -1,0 +1,17 @@
+{
+  "name": "talk-with-duck",
+  "private": true,
+  "description": "มัลติเล่า มัลติฟัง Talk With Duck — พื้นที่ปลอดภัยและระบบเพื่อนช่วยเพื่อนสำหรับนักศึกษาในสาขา",
+  "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "dev": "concurrently -k -n server,client -c yellow,cyan \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "lint": "npm --prefix server run lint && npm --prefix client run lint",
+    "test": "npm --prefix server test && npm --prefix client test",
+    "build": "npm --prefix client run build",
+    "format": "prettier --write \"server/{src,prisma,tests}/**/*.js\" \"client/src/**/*.{js,jsx,css}\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "prettier": "^3.9.9"
+  }
+}

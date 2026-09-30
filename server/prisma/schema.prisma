@@ -1,0 +1,269 @@
+// โครงสร้างฐานข้อมูล Talk With Duck (อ้างอิงตารางที่ 3.2 ในรูปเล่ม)
+// ชื่อ model เป็น PascalCase แต่ map ชื่อตาราง/คอลัมน์เป็น snake_case ให้ตรงกับเอกสาร
+// CHECK constraint และ RLS อยู่ใน migration "enable_rls" (Prisma schema เขียนแบบนี้ไม่ได้)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  member
+  moderator
+
+  @@map("user_role")
+}
+
+enum RoomType {
+  private // ห้อง 1-1 (Private Duck Room)
+  group // ห้องกลุ่ม 5+ คน (Group Hangout Room)
+  karaoke // Duck Karaoke Lounge
+
+  @@map("room_type")
+}
+
+enum MessageType {
+  text
+  sticker
+
+  @@map("message_type")
+}
+
+enum QuestionTopic {
+  study // การเรียน
+  project // โปรเจกต์
+  internship // ฝึกงาน/อาชีพ
+  life // ชีวิตในมหาวิทยาลัย
+  other
+
+  @@map("question_topic")
+}
+
+enum SongStatus {
+  queued
+  playing
+  done
+  skipped
+
+  @@map("song_status")
+}
+
+enum ReportTarget {
+  question
+  answer
+  message
+  user
+  room
+
+  @@map("report_target")
+}
+
+enum ReportReason {
+  harassment // คุกคาม/กลั่นแกล้ง
+  hate // ถ้อยคำรุนแรง/ล้อเลียนปมด้อย
+  sexual // คุกคามทางเพศ
+  spam
+  self_harm // มีความเสี่ยงทำร้ายตนเอง
+  other
+
+  @@map("report_reason")
+}
+
+enum ReportStatus {
+  pending
+  actioned
+  dismissed
+
+  @@map("report_status")
+}
+
+model User {
+  id                   String    @id @default(uuid()) @db.Uuid
+  email                String    @unique // เก็บเป็นตัวพิมพ์เล็กเสมอ ห้ามส่งให้ผู้ใช้อื่น
+  googleSub            String?   @unique @map("google_sub") // รหัสบัญชี Google (sub) · บัญชีทดสอบจาก seed ไม่มี
+  nickname             String    @db.VarChar(30)
+  avatar               String    @db.VarChar(40)
+  year                 Int       @db.SmallInt
+  role                 Role      @default(member)
+  emailVerifiedAt      DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  acceptedGuidelinesAt DateTime? @map("accepted_guidelines_at") @db.Timestamptz(6)
+  isBanned             Boolean   @default(false) @map("is_banned")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  refreshTokens   RefreshToken[]
+  hostedRooms     Room[]         @relation("RoomHost")
+  memberships     RoomMember[]
+  messages        Message[]
+  questions       Question[]
+  answers         Answer[]
+  loves           QuestionLove[]
+  songs           SongQueue[]
+  reports         Report[]       @relation("Reporter")
+  reviewedReports Report[]       @relation("Reviewer")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  // ถูกแลกเป็น token ใหม่แล้ว (ใช้ซ้ำได้ในช่วงผ่อนผันสั้น ๆ เผื่อเปิดหลายแท็บ)
+  rotatedAt DateTime? @map("rotated_at") @db.Timestamptz(6)
+  // ถูกเพิกถอน (ออกจากระบบ/ถูกแบน/ตรวจพบการขโมย/แทนแถวที่สมัครค้าง) = ใช้ไม่ได้อีกเลย
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model Room {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String    @db.VarChar(60)
+  type       RoomType
+  yearFilter Int?      @map("year_filter") @db.SmallInt // null = ทุกชั้นปี
+  hostId     String?   @map("host_id") @db.Uuid
+  capacity   Int       @db.SmallInt
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  closedAt   DateTime? @map("closed_at") @db.Timestamptz(6)
+
+  host     User?        @relation("RoomHost", fields: [hostId], references: [id], onDelete: SetNull)
+  members  RoomMember[]
+  messages Message[]
+  songs    SongQueue[]
+
+  @@index([isActive, type, yearFilter])
+  @@map("rooms")
+}
+
+// ออกจากห้องแบบ soft (ตั้ง left_at) เพื่อเก็บสถิติผู้เข้าร่วมตามข้อ 4.6
+model RoomMember {
+  id       String    @id @default(uuid()) @db.Uuid
+  roomId   String    @map("room_id") @db.Uuid
+  userId   String    @map("user_id") @db.Uuid
+  isMuted  Boolean   @default(false) @map("is_muted")
+  joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
+  leftAt   DateTime? @map("left_at") @db.Timestamptz(6)
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId, leftAt])
+  @@map("room_members")
+}
+
+model Message {
+  id        String      @id @default(uuid()) @db.Uuid
+  roomId    String      @map("room_id") @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  content   String      @db.VarChar(500)
+  type      MessageType @default(text)
+  isHidden  Boolean     @default(false) @map("is_hidden")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@map("messages")
+}
+
+model Question {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  title       String        @db.VarChar(120)
+  content     String        @db.VarChar(2000)
+  tagYear     Int?          @map("tag_year") @db.SmallInt
+  topic       QuestionTopic @default(other)
+  loveCount   Int           @default(0) @map("love_count")
+  isAnonymous Boolean       @default(false) @map("is_anonymous")
+  isHidden    Boolean       @default(false) @map("is_hidden")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers Answer[]
+  loves   QuestionLove[]
+
+  @@index([createdAt])
+  @@index([tagYear, topic])
+  @@map("questions")
+}
+
+model Answer {
+  id          String   @id @default(uuid()) @db.Uuid
+  questionId  String   @map("question_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  content     String   @db.VarChar(2000)
+  isAnonymous Boolean  @default(false) @map("is_anonymous")
+  isHidden    Boolean  @default(false) @map("is_hidden")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, createdAt])
+  @@map("answers")
+}
+
+model QuestionLove {
+  questionId String   @map("question_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, userId])
+  @@map("question_loves")
+}
+
+model SongQueue {
+  id          String     @id @default(uuid()) @db.Uuid
+  roomId      String     @map("room_id") @db.Uuid
+  videoId     String     @map("video_id") @db.VarChar(20)
+  songTitle   String     @map("song_title") @db.VarChar(200)
+  thumbnail   String?
+  requestedBy String     @map("requested_by") @db.Uuid
+  orderNo     Int        @map("order_no")
+  status      SongStatus @default(queued)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  room      Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  requester User @relation(fields: [requestedBy], references: [id], onDelete: Cascade)
+
+  @@index([roomId, status, orderNo])
+  @@map("song_queue")
+}
+
+model Report {
+  id           String       @id @default(uuid()) @db.Uuid
+  reporterId   String       @map("reporter_id") @db.Uuid
+  targetType   ReportTarget @map("target_type")
+  targetId     String       @map("target_id") @db.Uuid
+  reason       ReportReason
+  details      String?      @db.VarChar(500)
+  status       ReportStatus @default(pending)
+  reviewedById String?      @map("reviewed_by") @db.Uuid
+  reviewedAt   DateTime?    @map("reviewed_at") @db.Timestamptz(6)
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  reporter   User  @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("Reviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([status, createdAt])
+  @@map("reports")
+}

@@ -1,0 +1,134 @@
+// Duck Karaoke Lounge: ซ้าย = วิดีโอ/เนื้อเพลง · ขวา = คิวเพลงและแชทพร้อมสติกเกอร์ (ข้อ 3.5.6 ข้อ 6)
+import { Crown, MicVocal, Users } from 'lucide-react';
+import { useState } from 'react';
+import { Navigate, useParams } from 'react-router';
+import KaraokePlayer from '../components/karaoke/KaraokePlayer';
+import SongQueue from '../components/karaoke/SongQueue';
+import SongSearch from '../components/karaoke/SongSearch';
+import { ReportButton } from '../components/ReportModal';
+import ChatPanel from '../components/room/ChatPanel';
+import ControlBar from '../components/room/ControlBar';
+import LeaveRoomDialog from '../components/room/LeaveRoomDialog';
+import ParticipantGrid from '../components/room/ParticipantGrid';
+import PreJoin from '../components/room/PreJoin';
+import RoomStatusScreen from '../components/room/RoomStatusScreen';
+import { Badge } from '../components/ui';
+import { useLeaveRoomGuard } from '../hooks/useLeaveRoomGuard';
+import { useRoomLifecycle } from '../hooks/useRoomLifecycle';
+import { yearLabel } from '../lib/format';
+import { roomSession } from '../lib/roomSession';
+import { useAuthStore } from '../stores/authStore';
+import { useRoomStore } from '../stores/roomStore';
+
+const KaraokeRoomPage = () => {
+  const { id } = useParams();
+  const lifecycle = useRoomLifecycle(id, { backTo: '/karaoke' });
+  const { status, preview } = lifecycle;
+  const leaveGuard = useLeaveRoomGuard(id, lifecycle.leave);
+  const me = useAuthStore((s) => s.user);
+  const room = useRoomStore((s) => s.room);
+  const hostId = useRoomStore((s) => s.hostId);
+  const members = useRoomStore((s) => s.members);
+  const muted = useRoomStore((s) => s.muted);
+  const micAvailable = useRoomStore((s) => s.micAvailable);
+  const error = useRoomStore((s) => s.error);
+  const [tab, setTab] = useState('queue');
+
+  if (preview && preview.type !== 'karaoke') return <Navigate to={`/room/${id}`} replace />;
+
+  const ended =
+    ['closed', 'replaced', 'left'].includes(status) || (status === 'error' && !lifecycle.joinError);
+  if (ended && !lifecycle.joining) {
+    return (
+      <RoomStatusScreen
+        status={status}
+        error={error}
+        backTo="/karaoke"
+        onRetry={() => lifecycle.join({ withMic: true })}
+      />
+    );
+  }
+  if (status !== 'joined' || !room)
+    return <PreJoin {...lifecycle} onJoin={lifecycle.join} backTo="/karaoke" />;
+
+  const isHost = hostId === me.id;
+
+  return (
+    <div className="space-y-4">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-beak-600 dark:text-beak-300">
+            <MicVocal size={16} /> Duck Karaoke Lounge
+          </p>
+          <h1 className="truncate text-2xl font-medium">{room.name}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted">
+            <Badge tone="muted">{yearLabel(room.yearFilter)}</Badge>
+            <span className="flex items-center gap-1">
+              <Users size={16} /> {members.length}/{room.capacity}
+            </span>
+            {isHost && (
+              <Badge tone="duck">
+                <Crown size={12} /> คุณคือเจ้าของห้อง
+              </Badge>
+            )}
+          </div>
+        </div>
+        <ReportButton target={{ type: 'room', id: room.id, label: room.name }} />
+      </header>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="min-w-0 space-y-4">
+          <KaraokePlayer roomId={room.id} isHost={isHost} />
+          <div className="card p-3">
+            <ParticipantGrid compact tileSize={56} />
+          </div>
+        </section>
+
+        <aside className="flex min-h-0 min-w-0 flex-col gap-4">
+          <div
+            className="flex gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold lg:hidden"
+            role="tablist"
+          >
+            {[
+              ['queue', 'คิวเพลง'],
+              ['chat', 'แชท'],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={`flex-1 rounded-full py-2 transition ${tab === key ? 'bg-surface shadow' : 'text-muted'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className={`card space-y-4 p-4 ${tab === 'queue' ? '' : 'hidden lg:block'}`}>
+            <h2 className="font-display text-lg">จองเพลง</h2>
+            <SongSearch roomId={room.id} />
+            <h2 className="font-display text-lg">คิวเพลง</h2>
+            <div className="max-h-80 overflow-y-auto">
+              <SongQueue roomId={room.id} isHost={isHost} />
+            </div>
+          </div>
+          <ChatPanel
+            title="แชท & ส่งกำลังใจ"
+            className={`card h-[60dvh] lg:h-[420px] ${tab === 'chat' ? '' : 'hidden lg:flex'}`}
+          />
+        </aside>
+      </div>
+
+      <ControlBar
+        muted={muted}
+        micAvailable={micAvailable}
+        onToggleMute={() => roomSession.toggleMute()}
+        onLeave={leaveGuard.requestLeave}
+      />
+      <LeaveRoomDialog {...leaveGuard.dialog} />
+    </div>
+  );
+};
+
+export default KaraokeRoomPage;

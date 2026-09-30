@@ -1,0 +1,165 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens ของ Talk With Duck (ข้อ 2 แนวคิดด้าน UX/UI)
+ * - สีหลักเหลืองเป็ด/ส้มอ่อน = อบอุ่น เป็นกันเอง
+ * - สีรอง teal/ฟ้าพาสเทล = สงบ ปลอดภัย
+ * - สีพื้นผิว (bg/surface/ink/...) สลับอัตโนมัติตามโหมดมืดของระบบ
+ */
+@theme {
+  --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Mitr', 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
+
+  --color-duck-50: #fff9e6;
+  --color-duck-100: #fff0bf;
+  --color-duck-200: #ffe38a;
+  --color-duck-300: #ffd35c;
+  --color-duck-400: #ffc93c;
+  --color-duck-500: #f5b316;
+  --color-duck-600: #d99a0b;
+  --color-duck-700: #a87408;
+
+  --color-beak-300: #ffbf80;
+  --color-beak-400: #ff9f43;
+  --color-beak-500: #f7872a;
+  --color-beak-600: #e06f14;
+
+  --color-calm-50: #eefaf8;
+  --color-calm-100: #d9f3ef;
+  --color-calm-200: #b5e7e0;
+  --color-calm-300: #8dd8cd;
+  --color-calm-400: #5bbfb5;
+  --color-calm-500: #3fa69c;
+  --color-calm-600: #2e8880;
+  --color-calm-700: #226862;
+
+  --color-sky-soft: #cfe6fb;
+  --color-danger: #e5484d;
+  --color-danger-soft: #fde8e8;
+
+  /* พื้นผิว (โหมดสว่าง) */
+  --color-bg: #fffbf2;
+  --color-surface: #ffffff;
+  --color-surface-2: #fff5db;
+  --color-ink: #3b2f1e;
+  --color-muted: #7a6a55;
+  --color-line: #f0e3c4;
+
+  --radius-card: 1.5rem;
+  --shadow-soft: 0 6px 24px -8px rgb(168 116 8 / 0.25);
+
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-pop: pop 0.25s ease-out;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes pop {
+    0% {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+/* โหมดมืด: สลับเฉพาะสีพื้นผิว สีแบรนด์คงเดิม */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1c1814;
+    --color-surface: #262019;
+    --color-surface-2: #312a20;
+    --color-ink: #f6eedd;
+    --color-muted: #b8a88e;
+    --color-line: #3e3528;
+    --color-danger-soft: #3a1f1f;
+    --shadow-soft: 0 6px 24px -8px rgb(0 0 0 / 0.6);
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    min-height: 100dvh;
+    /* ลิงก์หรือคำยาวที่ไม่มีเว้นวรรค (เช่น URL ในกระทู้) ขึ้นบรรทัดใหม่แทนการดันหน้าให้กว้างเกินจอ */
+    overflow-wrap: break-word;
+    /* iPhone แนวนอน: เว้นรอยบาก (index.html ใช้ viewport-fit=cover) */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-calm-500;
+  }
+  /* Tailwind v4 ให้ปุ่มใช้ cursor ปกติ: ของที่กดได้ทุกอย่างเป็นรูปมือ กดไม่ได้เป็นเครื่องหมายห้าม */
+  button:not(:disabled),
+  [role='button'],
+  input:is([type='checkbox'], [type='radio'], [type='range']):not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface rounded-(--radius-card) border border-line shadow-(--shadow-soft);
+  }
+  .input {
+    @apply w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-calm-400 focus:ring-4 focus:ring-calm-200/50 focus:outline-none transition;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+}
+
+/*
+ * หน้าต่างยืนยัน SweetAlert2 (lib/dialog.jsx): สีและขอบโค้งเหมือน Modal ของแอป โหมดมืดสลับตามสีของแอปเอง
+ * ตั้งตัวแปรที่ .swal2-container ไม่ใช่ :root เพราะ SweetAlert2 ใส่ค่าเริ่มต้นไว้ที่ :root ทีหลัง CSS นี้
+ */
+.swal2-container {
+  --swal2-backdrop: rgb(0 0 0 / 0.4);
+  --swal2-background: var(--color-surface);
+  --swal2-color: var(--color-ink);
+  --swal2-border-radius: 2rem;
+  --swal2-width: 28rem;
+  --swal2-padding: 0 0 1.5rem;
+  --swal2-actions-margin: 1.5rem auto 0;
+}
+
+.swal2-popup .swal2-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.swal2-popup .swal2-html-container {
+  color: var(--color-muted);
+  font-size: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

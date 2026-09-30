@@ -1,0 +1,42 @@
+# Render Blueprint สำหรับส่วนหลังบ้าน (ข้อ 3.5.9 ข้อ 2) — ดูขั้นตอนเต็มใน docs/deploy.md
+services:
+  - type: web
+    name: talk-with-duck-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm ci --include=dev && npx prisma generate && npx prisma migrate deploy
+    startCommand: node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '24'
+      # Vercel rewrite → Render = proxy 2 ชั้น (ตรวจค่า IP ที่ถูกต้องได้ที่ /api/health?ip)
+      - key: TRUST_PROXY
+        value: '2'
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: 'true'
+      - key: DATABASE_POOL_MAX
+        value: '5'
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      # * = บัญชี Google ใดก็ได้ · ใส่ mail.kmutt.ac.th ถ้าจะให้เฉพาะนักศึกษา
+      - key: ALLOWED_EMAIL_DOMAINS
+        value: '*'
+      # OAuth Client ID ของปุ่ม Google (docs/deploy.md ข้อ 2) · ไม่ตั้งแล้ว server จะไม่ยอมเริ่มทำงาน
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: TURN_URLS
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false
