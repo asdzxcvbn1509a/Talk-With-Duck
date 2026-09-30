@@ -1,4 +1,6 @@
+import pg from 'pg';
 import { describe, expect, it } from 'vitest';
+import { withoutSslMode } from '../../src/utils/databaseUrl.js';
 import { isAllowedEmail, normalizeEmail, parseEmailDomains } from '../../src/utils/emailDomain.js';
 import { parseYouTubeId, decodeHtmlEntities } from '../../src/utils/youtube.js';
 import { hmac } from '../../src/lib/crypto.js';
@@ -37,6 +39,33 @@ describe('emailDomain', () => {
 
   it('แปลงอีเมลเป็นตัวพิมพ์เล็กและตัดช่องว่าง', () => {
     expect(normalizeEmail('  Duck@Mail.KMUTT.ac.th ')).toBe('duck@mail.kmutt.ac.th');
+  });
+});
+
+describe('databaseUrl', () => {
+  const url =
+    'postgresql://postgres.abcdefgh:pa%24s%40w0rd@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres';
+
+  it('ตัด sslmode ออกโดยไม่แตะส่วนอื่นของ URL', () => {
+    expect(withoutSslMode(`${url}?sslmode=require`)).toBe(url);
+    expect(withoutSslMode(`${url}?sslmode=require&application_name=twd`)).toBe(
+      `${url}?application_name=twd`,
+    );
+    expect(withoutSslMode(url)).toBe(url);
+  });
+
+  it('URL ผิดรูปแบบ: คืนค่าเดิม', () => {
+    expect(withoutSslMode('not a url')).toBe('not a url');
+  });
+
+  it('pg ใช้ค่า ssl ที่ server กำหนด แม้ URL เดิมมี sslmode=require', () => {
+    const ssl = { rejectUnauthorized: false };
+    const client = new pg.Client({
+      connectionString: withoutSslMode(`${url}?sslmode=require`),
+      ssl,
+    });
+    expect(client.ssl).toEqual(ssl);
+    expect(client.password).toBe('pa$s@w0rd');
   });
 });
 

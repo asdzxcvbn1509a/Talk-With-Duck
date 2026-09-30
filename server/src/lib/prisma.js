@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { env } from '../config/env.js';
+import { withoutSslMode } from '../utils/databaseUrl.js';
 
 const sslOptions = () => {
   if (!env.databaseSsl) return undefined;
@@ -10,7 +11,7 @@ const sslOptions = () => {
 };
 
 const adapter = new PrismaPg({
-  connectionString: env.DATABASE_URL,
+  connectionString: env.databaseSsl ? withoutSslMode(env.DATABASE_URL) : env.DATABASE_URL,
   max: env.DATABASE_POOL_MAX,
   ssl: sslOptions(),
 });

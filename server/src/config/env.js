@@ -13,7 +13,7 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   // โดเมนของหน้าเว็บที่อนุญาตให้เรียก API/Socket.IO คั่นด้วย , ได้หลายโดเมน
   CLIENT_ORIGIN: z.string().default('http://localhost:5173'),
-  // จำนวน proxy ที่อยู่หน้า server (Render = 1, Vercel rewrite + Render = 2)
+  // จำนวน proxy ที่อยู่หน้า server (Render = 3, Vercel rewrite + Render = 4)
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 
   DATABASE_URL: z.string().min(1, 'ต้องตั้งค่า DATABASE_URL'),

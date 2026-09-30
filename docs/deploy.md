@@ -19,7 +19,7 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
 1. สร้างโปรเจกต์ใหม่ที่ https://supabase.com เลือก Region **Southeast Asia (Singapore)** แล้วตั้ง Database Password (จดไว้)
 2. กด **Connect** → เลือกแท็บ **Session pooler** แล้วคัดลอก connection string
    - หน้าตาประมาณ `postgresql://postgres.<project-ref>:<password>@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres`
-   - เติม `?sslmode=require` ต่อท้าย
+   - ใช้ตามที่คัดลอกมา ไม่ต้องเติม `?sslmode=require` เพราะ server เข้ารหัสการเชื่อมต่อให้เองเมื่อตั้ง `DATABASE_SSL=true` (ถ้า URL มี `sslmode` ติดมา server จะตัดออกให้)
    - **ต้องใช้ Session pooler** เพราะแบบ Direct connection เป็น IPv6 ซึ่ง Render ต่อไม่ได้
 3. ยังไม่ต้องสร้างตารางเอง Render จะรัน `prisma migrate deploy` ให้ตอน build
 
@@ -27,7 +27,7 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
 
 ## 2. เข้าสู่ระบบด้วย Google (OAuth Client ID)
 
-ระบบให้ Google ยืนยันตัวตนแทนการส่ง OTP ทางอีเมล ไม่ต้องใช้ SMTP (Render แบบฟรีบล็อกการส่งอีเมลผ่าน SMTP อยู่แล้ว) ใช้ได้ทั้งบัญชี Gmail และบัญชี Google ของมหาวิทยาลัย ถ้าจะให้เฉพาะนักศึกษา ตั้ง `ALLOWED_EMAIL_DOMAINS=mail.kmutt.ac.th` บน Render
+ระบบให้ Google ยืนยันตัวตนแทนการส่ง OTP ทางอีเมล ไม่ต้องใช้ SMTP (Render แบบฟรีบล็อกการส่งอีเมลผ่าน SMTP อยู่แล้ว) ใช้ได้ทั้งบัญชี Gmail และบัญชี Google ของมหาวิทยาลัย ถ้าจะให้เฉพาะนักศึกษา แก้ `ALLOWED_EMAIL_DOMAINS` ใน `render.yaml` เป็น `mail.kmutt.ac.th` แล้ว push (ดูข้อ 3)
 
 1. https://console.cloud.google.com → สร้างโปรเจกต์ (ใช้โปรเจกต์เดียวกับ YouTube ในข้อ 5 ได้)
 2. **Google Auth Platform** → Get started:
@@ -50,6 +50,7 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
 ## 3. Render: ส่วนหลังบ้าน
 
 1. https://render.com → **New → Blueprint** → เลือก repository (Render จะอ่าน `render.yaml`)
+   - service จะถูกสร้างที่ region **Singapore** ตาม `render.yaml` ให้ใกล้ Supabase (region เปลี่ยนทีหลังไม่ได้ ต้องสร้าง service ใหม่)
 2. กรอกค่าที่ขึ้นว่า `sync: false`:
 
    | Key | ค่า |
@@ -64,6 +65,8 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
 4. เปิด `https://<service>.onrender.com/api/health?db` ต้องได้ `{"ok":true,…}`
 
 `JWT_ACCESS_SECRET` ถูกสุ่มให้อัตโนมัติ (`generateValue`) ห้ามเปลี่ยนบ่อย เพราะทุกคนจะหลุดออกจากระบบ
+
+ค่าที่มี `value:` ใน `render.yaml` (เช่น `ALLOWED_EMAIL_DOMAINS`, `TRUST_PROXY`) ให้แก้ที่ไฟล์แล้ว push ถ้าแก้ใน Dashboard ค่าจะถูกเขียนทับเมื่อ Blueprint sync ครั้งถัดไป ส่วนค่าในตารางด้านบนแก้ได้ที่เมนู **Environment** ของ service
 
 > Render ฟรีจะ**หลับหลังไม่มีคนใช้ 15 นาที** คนแรกที่เข้าเว็บจะรอประมาณ 1 นาที (หน้าเว็บขึ้น “กำลังปลุกเป็ด…”) ช่วง Duck Community Week แนะนำตั้ง UptimeRobot (ฟรี) ให้เรียก `/api/health` ทุก 10 นาที
 
@@ -121,9 +124,11 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
 ## 8. เช็กลิสต์หลัง deploy
 
 - [ ] `/api/health?db` ตอบ `ok: true`
-- [ ] `/api/health?ip` (เปิดผ่าน URL ของ Vercel) แสดง IP ของเครื่องเรา ไม่ใช่ IP ของ Vercel (ถ้าไม่ตรงปรับ `TRUST_PROXY`)
+- [ ] `/api/health?ip` (เปิดผ่าน URL ของ Vercel) แสดง IP เดียวกับที่ https://api.ipify.org แสดง
+  - ถ้าได้ IP ที่ขึ้นต้น `10.` หรือ `172.` แปลว่า `TRUST_PROXY` น้อยไป ให้เพิ่มใน `render.yaml` ทีละ 1 แล้ว push จนตรง (ใช้เลขน้อยที่สุดที่ทำให้ตรง)
+  - ถ้าน้อยไป ผู้ใช้จำนวนมากจะถูกนับเป็น IP เดียวกัน แล้วโดนจำกัดความถี่ตอนเข้าสู่ระบบพร้อมกัน
 - [ ] เข้าสู่ระบบด้วยบัญชี Gmail และบัญชี `@mail.kmutt.ac.th` จริงได้ (ครั้งแรกขึ้นหน้าตั้งชื่อเล่นและเลือกน้องเป็ด)
-- [ ] เข้าด้วยบัญชี Gmail ทั่วไปแล้วถูกปฏิเสธ
+- [ ] ถ้าจำกัดโดเมนไว้ (`ALLOWED_EMAIL_DOMAINS=mail.kmutt.ac.th`): เข้าด้วยบัญชี Gmail ทั่วไปแล้วถูกปฏิเสธ (ค่าเริ่มต้น `*` รับทุกบัญชี)
 - [ ] หน้าเข้าสู่ระบบไม่มีส่วน "บัญชีทดสอบ" (มีเฉพาะตอนพัฒนาในเครื่อง)
 - [ ] รีเฟรชหน้าแล้วยังล็อกอินอยู่ (cookie ทำงาน) ทั้งบน Chrome และ Safari/iPhone
 - [ ] มือถือ 2 เครื่องคุยห้อง 1-1 กันได้ (ลองทั้ง Wi-Fi และเน็ตมือถือ)
