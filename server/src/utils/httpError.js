@@ -10,7 +10,7 @@ export class HttpError extends Error {
 
 export const badRequest = (code, message = 'ข้อมูลไม่ถูกต้อง', details) =>
   new HttpError(400, code, message, details);
-export const unauthorized = (code = 'UNAUTHORIZED', message = 'กรุณาเข้าสู่ระบบ') =>
+export const unauthorized = (code = 'UNAUTHORIZED', message = 'เข้าสู่ระบบก่อนนะ') =>
   new HttpError(401, code, message);
 export const forbidden = (code = 'FORBIDDEN', message = 'ไม่มีสิทธิ์ทำรายการนี้') =>
   new HttpError(403, code, message);

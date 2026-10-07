@@ -1,11 +1,19 @@
 // หน้าหลัก (Lobby): กิจกรรมประจำวัน · ตัวกรองชั้นปี/ประเภทห้อง · รายการห้อง · ทางลัดไปบอร์ด Q&A
-import { Hand, Pin, Plus, Shuffle } from 'lucide-react';
+import { ExternalLink, FilterX, Hand, Pin, Plus, Shuffle } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import CreateRoomModal from '../components/CreateRoomModal';
 import { RoomTypeFilter, YearFilter } from '../components/Filters';
 import RoomCard, { RoomCardSkeleton } from '../components/RoomCard';
-import { Button, EmptyState, LoadError, Skeleton, SkeletonGroup, Spinner } from '../components/ui';
+import {
+  Button,
+  EmptyState,
+  LoadError,
+  PageTitle,
+  Skeleton,
+  SkeletonGroup,
+  Spinner,
+} from '../components/ui';
 import { activityFor } from '../config/dailyActivities';
 import { TOPICS } from '../config/constants';
 import { listQuestions } from '../api/questions';
@@ -20,24 +28,44 @@ import { toast, useUiStore } from '../stores/uiStore';
 
 const LATEST_QUESTIONS = { limit: 3 };
 
+const ACTIVITY_CARD_CLASS =
+  'relative block overflow-hidden rounded-(--radius-card) bg-gradient-to-br from-duck-300 via-duck-400 to-beak-400 p-6 text-on-duck shadow-(--shadow-soft)';
+
 const DailyActivityCard = () => {
   const activity = activityFor();
-  return (
-    <Link
-      to={activity.to}
-      className="relative block overflow-hidden rounded-(--radius-card) bg-gradient-to-br from-duck-300 via-duck-400 to-beak-400 p-6 text-on-duck shadow-(--shadow-soft)"
-    >
+  const content = (
+    <>
       <p className="flex items-center gap-1.5 text-sm font-semibold opacity-80">
         <activity.icon size={16} />
         {activity.special ? 'Duck Community Week' : 'กิจกรรมวันนี้'}
+        {activity.href && <ExternalLink size={14} aria-hidden="true" />}
       </p>
       <h2 className="mt-1 max-w-[80%] text-2xl font-medium">{activity.title}</h2>
-      <p className="mt-2 max-w-[75%] text-on-duck/80">{activity.detail}</p>
+      <p className="mt-2 max-w-[75%] text-on-duck/80">
+        {activity.detail}
+        {activity.href && <span className="sr-only"> (เปิดในแท็บใหม่)</span>}
+      </p>
       <img
         src="/duck.svg"
         alt=""
         className="absolute -right-4 -bottom-6 h-24 w-24 rotate-12 opacity-90 sm:h-32 sm:w-32"
       />
+    </>
+  );
+
+  // แบบประเมิน (Google Forms) เป็นเว็บภายนอก: เปิดแท็บใหม่ ผู้ใช้จะได้ไม่หลุดจากบ่อเป็ด
+  return activity.href ? (
+    <a
+      href={activity.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={ACTIVITY_CARD_CLASS}
+    >
+      {content}
+    </a>
+  ) : (
+    <Link to={activity.to} className={ACTIVITY_CARD_CLASS}>
+      {content}
     </Link>
   );
 };
@@ -111,6 +139,7 @@ const LobbyPage = () => {
   const { rooms, loading, error, retry } = useLobbyRooms({ year, type });
   const [creating, setCreating] = useState(false);
   const [matching, setMatching] = useState(false);
+  const filtered = Boolean(year || type);
 
   const startQuickMatch = async () => {
     setMatching(true);
@@ -126,6 +155,7 @@ const LobbyPage = () => {
 
   return (
     <div className="space-y-6">
+      <PageTitle title="หน้าหลัก" />
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-medium sm:text-3xl">
           <span className="min-w-0">สวัสดี {user.nickname}</span>
@@ -193,16 +223,41 @@ const LobbyPage = () => {
         ) : error ? (
           <LoadError title="โหลดรายการห้องไม่สำเร็จ" message={error} onRetry={retry} />
         ) : rooms.length === 0 ? (
-          <EmptyState
-            title="ยังไม่มีห้องที่ตรงกับตัวกรอง"
-            action={
-              <Button icon={Plus} onClick={() => setCreating(true)}>
-                เปิดห้องแรกเลย
-              </Button>
-            }
-          >
-            ลองเปลี่ยนตัวกรอง หรือเปิดห้องใหม่ให้เพื่อน ๆ เข้ามาคุยด้วย
-          </EmptyState>
+          // ข้อความแยกตามว่ากรองอยู่หรือเปล่า: ไม่ได้กรองแต่บอกว่า "ไม่ตรงกับตัวกรอง" จะทำให้งง
+          filtered ? (
+            <EmptyState
+              title="ยังไม่มีห้องที่ตรงกับตัวกรอง"
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button
+                    variant="soft"
+                    icon={FilterX}
+                    onClick={() => setFilter({ year: null, type: null })}
+                  >
+                    ล้างตัวกรอง
+                  </Button>
+                  <Button icon={Plus} onClick={() => setCreating(true)}>
+                    เปิดห้องใหม่
+                  </Button>
+                </div>
+              }
+            >
+              ลองดูห้องของทุกชั้นปี หรือเปิดห้องใหม่ตามที่เลือกไว้ให้เพื่อน ๆ เข้ามาคุยด้วย
+            </EmptyState>
+          ) : (
+            <EmptyState
+              title="ยังไม่มีห้องเปิดอยู่ตอนนี้"
+              action={
+                <Button icon={Plus} onClick={() => setCreating(true)}>
+                  เปิดห้องแรกเลย
+                </Button>
+              }
+            >
+              เปิดห้องแล้วชวนเพื่อน ๆ มาคุย หรือกด{' '}
+              <span className="whitespace-nowrap">“สุ่มคุย 1-1”</span>{' '}
+              ด้านบนเพื่อหาเพื่อนที่พร้อมฟัง
+            </EmptyState>
+          )
         ) : (
           // grid-cols-1 (minmax(0, 1fr)): ชื่อห้องยาวที่ตัดด้วย … จะไม่ดันคอลัมน์ให้กว้างเกินจอมือถือ
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

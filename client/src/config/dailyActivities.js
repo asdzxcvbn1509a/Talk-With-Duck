@@ -1,7 +1,9 @@
 // การ์ดกิจกรรมประจำวันบนหน้า Lobby
 // ทีมแก้วันที่/กิจกรรมของ Duck Community Week ได้ที่ไฟล์นี้ (วันที่เป็น ค.ศ. รูปแบบ YYYY-MM-DD)
 // icon คือไอคอนจาก lucide-react (ค้นชื่อได้ที่ lucide.dev)
+// survey: ใช้แทน title/detail/to เมื่อตั้งลิงก์แบบประเมิน (VITE_SURVEY_URL) ไว้ การ์ดจะเปิดแบบประเมินในแท็บใหม่
 import {
+  ClipboardCheck,
   Compass,
   Handshake,
   Heart,
@@ -14,6 +16,7 @@ import {
   Sunrise,
   Wrench,
 } from 'lucide-react';
+import { surveyUrl } from './links';
 
 export const COMMUNITY_WEEK = [
   {
@@ -48,8 +51,13 @@ export const COMMUNITY_WEEK = [
     date: '2026-12-18',
     icon: Sparkles,
     title: 'ปิดท้ายสัปดาห์เป็ด',
-    detail: 'ร่วมตอบแบบประเมินความพึงพอใจ ช่วยให้บ่อเป็ดดีขึ้น',
+    detail: 'ขอบคุณที่มาร่วมสัปดาห์เป็ด แวะส่งใจให้คำตอบดี ๆ บนบอร์ดก่อนปิดสัปดาห์',
     to: '/qa',
+    survey: {
+      icon: ClipboardCheck,
+      title: 'ปิดท้ายสัปดาห์เป็ด',
+      detail: 'ช่วยตอบแบบประเมินความพึงพอใจ บ่อเป็ดจะได้ดีขึ้นในเทอมหน้า',
+    },
   },
 ];
 
@@ -101,8 +109,15 @@ const WEEKDAY = [
 
 const pad = (n) => String(n).padStart(2, '0');
 
+// คืน { icon, title, detail, special } พร้อม to (หน้าในเว็บ) หรือ href (ลิงก์ภายนอก) อย่างใดอย่างหนึ่ง
 export const activityFor = (date = new Date()) => {
   const key = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   const special = COMMUNITY_WEEK.find((a) => a.date === key);
-  return special ? { ...special, special: true } : { ...WEEKDAY[date.getDay()], special: false };
+  if (!special) return { ...WEEKDAY[date.getDay()], special: false };
+
+  const { survey, to, ...activity } = special;
+  const href = survey && surveyUrl();
+  return href
+    ? { ...activity, ...survey, href, special: true }
+    : { ...activity, to, special: true };
 };

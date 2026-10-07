@@ -14,7 +14,7 @@ import ParticipantGrid from '../components/room/ParticipantGrid';
 import PreJoin from '../components/room/PreJoin';
 import RoomStatusScreen from '../components/room/RoomStatusScreen';
 import ShareRoomButton from '../components/room/ShareRoomButton';
-import { Badge, Segmented } from '../components/ui';
+import { Badge, PageTitle, Segmented } from '../components/ui';
 import { useLeaveRoomGuard } from '../hooks/useLeaveRoomGuard';
 import { useRoomLifecycle } from '../hooks/useRoomLifecycle';
 import { yearLabel } from '../lib/format';
@@ -41,6 +41,8 @@ const KaraokeRoomPage = () => {
   const micAvailable = useRoomStore((s) => s.micAvailable);
   const error = useRoomStore((s) => s.error);
   const [tab, setTab] = useState('queue');
+  // ไม่ใช้ชื่อห้องเป็นชื่อแท็บ (ดู PageTitle)
+  const pageTitle = <PageTitle title="ห้องคาราโอเกะ" />;
 
   if (preview && preview.type !== 'karaoke') return <Navigate to={`/room/${id}`} replace />;
 
@@ -48,21 +50,31 @@ const KaraokeRoomPage = () => {
     ['closed', 'replaced', 'left'].includes(status) || (status === 'error' && !lifecycle.joinError);
   if (ended && !lifecycle.joining) {
     return (
-      <RoomStatusScreen
-        status={status}
-        error={error}
-        backTo="/karaoke"
-        onRetry={() => lifecycle.join({ withMic: true })}
-      />
+      <>
+        {pageTitle}
+        <RoomStatusScreen
+          status={status}
+          error={error}
+          backTo="/karaoke"
+          onRetry={() => lifecycle.join({ withMic: true })}
+        />
+      </>
     );
   }
-  if (status !== 'joined' || !room)
-    return <PreJoin {...lifecycle} onJoin={lifecycle.join} backTo="/karaoke" />;
+  if (status !== 'joined' || !room) {
+    return (
+      <>
+        {pageTitle}
+        <PreJoin {...lifecycle} onJoin={lifecycle.join} backTo="/karaoke" />
+      </>
+    );
+  }
 
   const isHost = hostId === me.id;
 
   return (
     <div className="space-y-4">
+      {pageTitle}
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-beak-700 dark:text-beak-300">

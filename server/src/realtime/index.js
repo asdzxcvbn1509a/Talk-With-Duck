@@ -33,7 +33,7 @@ export const initRealtime = (httpServer) => {
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
-      if (!token) throw Object.assign(new Error('กรุณาเข้าสู่ระบบ'), { code: 'NO_TOKEN' });
+      if (!token) throw Object.assign(new Error('เข้าสู่ระบบก่อนนะ'), { code: 'NO_TOKEN' });
       socket.data.user = await loadUserFromToken(token);
       next();
     } catch (err) {

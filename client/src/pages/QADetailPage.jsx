@@ -13,6 +13,7 @@ import {
   EmptyState,
   IconButton,
   LoadError,
+  PageTitle,
   Skeleton,
   SkeletonGroup,
   Toggle,
@@ -64,6 +65,11 @@ const AnswerComposer = ({ questionId, onCreated }) => {
           checked={isAnonymous}
           onChange={setIsAnonymous}
           label="ตอบแบบไม่เปิดเผยตัวตน"
+          description={
+            isAnonymous
+              ? 'คนอื่นจะเห็นเป็น “เป็ดนิรนาม” · เลี่ยงรายละเอียดที่ทำให้คนอื่นเดาได้ว่าเป็นใคร'
+              : undefined
+          }
         />
         <Button type="submit" icon={Send} loading={sending} disabled={!content.trim()}>
           ส่งคำตอบ
@@ -109,24 +115,41 @@ const QADetailPage = () => {
   const question = data?.question ?? null;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  // ไม่ใช้หัวข้อคำถามเป็นชื่อแท็บ (ดู PageTitle)
+  const pageTitle = <PageTitle title="คำถาม" />;
 
   if (error && errorCode(error) === 'QUESTION_NOT_FOUND') {
     return (
-      <EmptyState
-        icon={SearchX}
-        title={errorMessage(error)}
-        action={
-          <Link to="/qa" className="link">
-            กลับไปที่บอร์ด
-          </Link>
-        }
-      />
+      <>
+        {pageTitle}
+        <EmptyState
+          icon={SearchX}
+          title={errorMessage(error)}
+          action={
+            <Link to="/qa" className="link">
+              กลับไปที่บอร์ด
+            </Link>
+          }
+        />
+      </>
     );
   }
   if (error) {
-    return <LoadError title="โหลดกระทู้ไม่สำเร็จ" message={errorMessage(error)} onRetry={retry} />;
+    return (
+      <>
+        {pageTitle}
+        <LoadError title="โหลดคำถามไม่สำเร็จ" message={errorMessage(error)} onRetry={retry} />
+      </>
+    );
   }
-  if (!question) return <QuestionSkeleton />;
+  if (!question) {
+    return (
+      <>
+        {pageTitle}
+        <QuestionSkeleton />
+      </>
+    );
+  }
 
   const topic = TOPICS[question.topic] ?? TOPICS.other;
   const patchQuestion = (patch) => setData((d) => ({ question: { ...d.question, ...patch } }));
@@ -146,16 +169,16 @@ const QADetailPage = () => {
 
   const remove = async () => {
     const confirmed = await confirmDialog({
-      title: 'ลบกระทู้นี้ใช่ไหม?',
-      text: 'คำตอบทั้งหมดในกระทู้จะถูกลบไปด้วย',
-      confirmText: 'ลบกระทู้',
+      title: 'ลบคำถามนี้ใช่ไหม?',
+      text: 'คำตอบทั้งหมดของคำถามนี้จะถูกลบไปด้วย',
+      confirmText: 'ลบคำถาม',
       icon: Trash,
       danger: true,
     });
     if (!confirmed) return;
     try {
       await removeQuestion(id);
-      toast('ลบกระทู้แล้ว', 'success');
+      toast('ลบคำถามแล้ว', 'success');
       navigate('/qa', { replace: true });
     } catch (err) {
       toast(errorMessage(err), 'error');
@@ -164,6 +187,7 @@ const QADetailPage = () => {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
+      {pageTitle}
       <Link
         to="/qa"
         className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"

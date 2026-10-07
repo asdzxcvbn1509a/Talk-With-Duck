@@ -1,10 +1,23 @@
-import { Flag, Lock, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react';
+import {
+  ClipboardCheck,
+  ExternalLink,
+  Flag,
+  LifeBuoy,
+  Lock,
+  LogOut,
+  Monitor,
+  Moon,
+  Send,
+  Shield,
+  Sun,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import DuckAvatar from '../components/DuckAvatar';
 import { AvatarPicker, YearPicker } from '../components/ProfilePickers';
-import { Button, Field, Segmented } from '../components/ui';
+import { Button, Field, PageTitle, Segmented } from '../components/ui';
 import { LIMITS } from '../config/constants';
+import { contactUrl, surveyUrl } from '../config/links';
 import { errorMessage } from '../lib/api';
 import { logout, updateProfile } from '../lib/auth';
 import { roomSession } from '../lib/roomSession';
@@ -16,6 +29,19 @@ const THEME_OPTIONS = [
   { value: 'light', label: 'สว่าง', icon: Sun },
   { value: 'dark', label: 'มืด', icon: Moon },
 ];
+
+const MENU_ROW_CLASS = 'flex items-center gap-3 px-6 py-4 hover:bg-surface-2';
+
+// ลิงก์ออกนอกเว็บ (แบบประเมิน/ช่องทางติดต่อ): เปิดแท็บใหม่ และบอกผู้ใช้ด้วยไอคอนกับข้อความสำหรับโปรแกรมอ่านหน้าจอ
+const ExternalRow = ({ href, icon: IconComponent, children }) => {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={MENU_ROW_CLASS}>
+      <IconComponent size={20} /> {children}
+      <span className="sr-only"> (เปิดในแท็บใหม่)</span>
+      <ExternalLink size={16} className="ml-auto shrink-0 text-muted" aria-hidden="true" />
+    </a>
+  );
+};
 
 const MePage = () => {
   const user = useAuthStore((s) => s.user);
@@ -56,6 +82,7 @@ const MePage = () => {
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
+      <PageTitle title="โปรไฟล์ของฉัน" />
       <section className="card flex items-center gap-4 p-6">
         <DuckAvatar avatar={form.avatar} size={80} />
         <div className="min-w-0">
@@ -104,14 +131,25 @@ const MePage = () => {
       </section>
 
       <nav className="card divide-y divide-line overflow-hidden">
-        <Link to="/guidelines" className="flex items-center gap-3 px-6 py-4 hover:bg-surface-2">
+        <Link to="/guidelines" className={MENU_ROW_CLASS}>
           <Shield size={20} /> ข้อตกลงพื้นที่ปลอดภัย
         </Link>
+        <Link to="/guidelines#help" className={MENU_ROW_CLASS}>
+          <LifeBuoy size={20} /> ช่องทางขอความช่วยเหลือ
+        </Link>
+        {/* ลิงก์ภายนอกแสดงเฉพาะเมื่อทีมตั้งค่าไว้ (config/links.js) */}
+        {surveyUrl() && (
+          <ExternalRow href={surveyUrl()} icon={ClipboardCheck}>
+            ตอบแบบประเมินความพึงพอใจ
+          </ExternalRow>
+        )}
+        {contactUrl() && (
+          <ExternalRow href={contactUrl()} icon={Send}>
+            ติดต่อทีมผู้ดูแล
+          </ExternalRow>
+        )}
         {user.role === 'moderator' && (
-          <Link
-            to="/admin/reports"
-            className="flex items-center gap-3 px-6 py-4 hover:bg-surface-2"
-          >
+          <Link to="/admin/reports" className={MENU_ROW_CLASS}>
             <Flag size={20} /> จัดการรายงาน (ผู้ดูแล)
           </Link>
         )}

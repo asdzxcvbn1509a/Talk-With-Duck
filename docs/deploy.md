@@ -80,6 +80,10 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
      - `VITE_SOCKET_URL=https://<service>.onrender.com` (URL อยู่ด้านบนของหน้า service บน Render)
      - `VITE_GOOGLE_CLIENT_ID=<Client ID จากข้อ 2>`
      - ไม่ต้องตั้ง `VITE_API_URL` เว้นว่างไว้ หน้าเว็บจะเรียก `/api` ผ่าน rewrite ใน `client/vercel.json`
+     - (ไม่บังคับ) `VITE_SURVEY_URL=<ลิงก์ Google Forms แบบประเมินความพึงพอใจ>` ขึ้นในหน้า "ฉัน" และการ์ดกิจกรรมวันสุดท้ายของ Duck Community Week
+     - (ไม่บังคับ) `VITE_CONTACT_URL=<เพจ Facebook / LINE OA / mailto: ของทีม>` ขึ้นเป็นลิงก์ "ติดต่อทีมผู้ดูแล"
+     - ไม่ต้องตั้ง `VITE_SITE_URL`: รูปตัวอย่างลิงก์ (`og:image`) ใช้โดเมน production ที่ Vercel ส่งให้ตอน build
+     - ตั้งหรือแก้ค่า `VITE_*` แล้วต้อง **Redeploy** ค่าใหม่ถึงจะมีผล (ค่าถูกฝังตอน build)
 3. Deploy แล้วนำ URL ของ Vercel ไปใส่ใน `CLIENT_ORIGIN` บน Render แล้ว redeploy Render
 
 `/api/*` ถูกส่งต่อไป Render ผ่าน rewrite (same-origin) cookie ของ Refresh Token จึงใช้ได้แม้ใน Safari ส่วน Socket.IO ต่อตรงไป Render เพราะ rewrite ไม่รองรับ WebSocket
@@ -133,6 +137,13 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
 - [ ] รีเฟรชหน้าแล้วยังล็อกอินอยู่ (cookie ทำงาน) ทั้งบน Chrome และ Safari/iPhone
 - [ ] มือถือ 2 เครื่องคุยห้อง 1-1 กันได้ (ลองทั้ง Wi-Fi และเน็ตมือถือ)
 - [ ] ห้องคาราโอเกะ: เพลงเล่นตรงกันทุกเครื่อง
+- [ ] **โทรเช็กช่องทางให้คำปรึกษาของ มจธ.** ใน `client/src/config/helpLines.js`
+  - เบอร์ 0-2470-8105, อีเมล, เพจ Facebook ยังใช้ได้ และชื่อหน่วยงานถูกต้อง
+  - ข้อมูลมาจากเว็บสำนักงานกิจการนักศึกษา แต่ยังไม่ได้โทรยืนยัน
+  - ถ้าไม่ตรงให้แก้ไฟล์นี้ก่อนประชาสัมพันธ์
+- [ ] ตั้ง `VITE_SURVEY_URL` ก่อน Duck Community Week (14 ธ.ค.) แล้วเปิดหน้า "ฉัน" เห็นแถว "ตอบแบบประเมินความพึงพอใจ"
+- [ ] วางลิงก์ห้องในแชท LINE แล้วตัวอย่างลิงก์ขึ้นรูปน้องเป็ดและชื่อเว็บ
+  - ถ้าเคยวางลิงก์ก่อนตั้งค่า LINE อาจจำตัวอย่างเก่าไว้ ให้ลองลิงก์ห้องใหม่
 - [ ] ไล่ `docs/test-plan.md` ให้ครบก่อนประชาสัมพันธ์
 
 ## อัปเดตระบบ

@@ -5,6 +5,12 @@ import { useEffect, useRef } from 'react';
 import { buttonClass } from './buttonClass';
 import DuckAvatar from './DuckAvatar';
 
+// ชื่อแท็บของหน้า: React 19 ย้าย <title> ไปไว้ใน <head> และใช้แทนชื่อใน index.html จนกว่าจะออกจากหน้านี้
+// ใส่แค่ชื่อหน้า ไม่ใส่ชื่อห้องหรือหัวข้อคำถาม เพราะชื่อแท็บถูกเก็บในประวัติของเบราว์เซอร์ (คอมห้องแล็บใช้ร่วมกัน)
+export const PageTitle = ({ title }) => {
+  return <title>{`${title} · มัลติเล่า มัลติฟัง`}</title>;
+};
+
 export const Button = ({
   variant = 'primary',
   size = 'md',

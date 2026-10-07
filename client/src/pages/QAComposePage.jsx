@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import QuestionForm from '../components/qa/QuestionForm';
+import { PageTitle } from '../components/ui';
 import { createQuestion } from '../api/questions';
 import { errorMessage } from '../lib/api';
 import { toast } from '../stores/uiStore';
@@ -25,6 +26,7 @@ const QAComposePage = () => {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
+      <PageTitle title="ตั้งคำถามใหม่" />
       <Link
         to="/qa"
         className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"

@@ -2,6 +2,7 @@
 import {
   Ban,
   Flag,
+  HandHelping,
   Heart,
   LifeBuoy,
   Lock,
@@ -9,10 +10,10 @@ import {
   SlidersHorizontal,
   UserRoundX,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import CrisisSupport from '../components/CrisisSupport';
-import { Button } from '../components/ui';
+import { Button, PageTitle } from '../components/ui';
 import { errorMessage } from '../lib/api';
 import { acceptGuidelines } from '../lib/auth';
 import { useAuthStore } from '../stores/authStore';
@@ -47,7 +48,12 @@ const RULES = [
   {
     icon: SlidersHorizontal,
     title: 'คุณกำหนดขอบเขตเองได้เสมอ',
-    body: 'ปิดไมค์ ออกจากห้อง หรือเลือกโพสต์แบบไม่ระบุตัวตนได้ทุกเมื่อ โดยไม่ต้องอธิบายเหตุผลกับใคร',
+    body: 'ปิดไมค์ ออกจากห้อง หรือถามและตอบแบบไม่เปิดเผยตัวตนได้ทุกเมื่อ โดยไม่ต้องอธิบายเหตุผลกับใคร',
+  },
+  {
+    icon: HandHelping,
+    title: 'เพื่อนช่วยเพื่อน ไม่ใช่หมอ',
+    body: 'แชร์ประสบการณ์และให้กำลังใจกันได้ แต่ไม่วินิจฉัยโรคหรือแนะนำยา ถ้าเพื่อนดูมีความเสี่ยงจะทำร้ายตัวเอง ชวนเขาติดต่อช่องทางด้านล่าง และกดรายงานหัวข้อ “มีความเสี่ยงทำร้ายตัวเอง” ทีมผู้ดูแลจะช่วยดูแลต่อ',
   },
   {
     icon: Flag,
@@ -62,6 +68,11 @@ const GuidelinesPage = () => {
   const location = useLocation();
   const [loading, setLoading] = useState(false);
   const accepted = Boolean(user?.acceptedGuidelinesAt);
+
+  // ลิงก์ /guidelines#help (เช่น จากหน้า "ฉัน") เลื่อนลงไปที่ช่องทางขอความช่วยเหลือ (router ไม่เลื่อนตาม # ให้เอง)
+  useEffect(() => {
+    if (location.hash === '#help') document.getElementById('help')?.scrollIntoView();
+  }, [location.hash]);
 
   const accept = async () => {
     setLoading(true);
@@ -78,6 +89,7 @@ const GuidelinesPage = () => {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <PageTitle title="ข้อตกลงพื้นที่ปลอดภัย" />
       <header className="text-center">
         <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-calm-100 text-calm-700 dark:bg-calm-700/30 dark:text-calm-200">
           <LifeBuoy size={32} />
@@ -109,7 +121,7 @@ const GuidelinesPage = () => {
         ))}
       </ol>
 
-      <CrisisSupport />
+      <CrisisSupport id="help" />
 
       {!accepted && (
         <div className="sticky bottom-24 md:bottom-6">

@@ -3,8 +3,9 @@ import { useState } from 'react';
 import CreateRoomModal from '../components/CreateRoomModal';
 import { YearFilter } from '../components/Filters';
 import RoomCard, { RoomCardSkeleton } from '../components/RoomCard';
-import { Button, EmptyState, LoadError, SkeletonGroup } from '../components/ui';
+import { Button, EmptyState, LoadError, PageTitle, SkeletonGroup } from '../components/ui';
 import { useLobbyRooms } from '../hooks/useLobbyRooms';
+import { yearLabel } from '../lib/format';
 
 const KaraokeLobbyPage = () => {
   const [year, setYear] = useState(null);
@@ -13,6 +14,7 @@ const KaraokeLobbyPage = () => {
 
   return (
     <div className="space-y-6">
+      <PageTitle title="คาราโอเกะ" />
       <section className="relative overflow-hidden rounded-(--radius-card) bg-gradient-to-br from-beak-400 via-duck-400 to-duck-300 p-6 text-on-duck sm:p-8">
         <p className="font-semibold opacity-80">Duck Karaoke Lounge</p>
         <h1 className="mt-1 max-w-md text-3xl font-medium">เหนื่อยนักก็มาร้องเพลงกัน</h1>
@@ -43,10 +45,14 @@ const KaraokeLobbyPage = () => {
       ) : rooms.length === 0 ? (
         <EmptyState
           mascot="duck-headphones"
-          title="ยังไม่มีห้องคาราโอเกะเปิดอยู่"
+          title={
+            year ? `ยังไม่มีห้องคาราโอเกะของ${yearLabel(year)}` : 'ยังไม่มีห้องคาราโอเกะเปิดอยู่'
+          }
           action={<Button onClick={() => setCreating(true)}>เปิดห้องแรก</Button>}
         >
-          เปิดห้องแล้วชวนเพื่อน ๆ มาร้องด้วยกัน
+          {year
+            ? 'ลองดูห้องของทุกชั้นปี หรือเปิดห้องแล้วชวนเพื่อน ๆ มาร้องด้วยกัน'
+            : 'เปิดห้องแล้วชวนเพื่อน ๆ มาร้องด้วยกัน'}
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

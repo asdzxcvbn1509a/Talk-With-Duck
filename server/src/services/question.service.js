@@ -11,7 +11,7 @@ const questionInclude = (viewer) => ({
   loves: { where: { userId: viewer.id }, select: { userId: true } },
 });
 
-const questionNotFound = () => notFound('QUESTION_NOT_FOUND', 'ไม่พบกระทู้นี้ (อาจถูกลบไปแล้ว)');
+const questionNotFound = () => notFound('QUESTION_NOT_FOUND', 'ไม่พบคำถามนี้ (อาจถูกลบไปแล้ว)');
 const isModerator = (viewer) => viewer.role === 'moderator';
 
 export const listQuestions = async (viewer, { year, topic, sort, cursor, limit }) => {
@@ -72,7 +72,7 @@ const loadOwnQuestion = async (viewer, id, { allowModerator = false } = {}) => {
   const question = await prisma.question.findUnique({ where: { id } });
   if (!question || question.isHidden) throw questionNotFound();
   if (question.userId !== viewer.id && !(allowModerator && isModerator(viewer))) {
-    throw forbidden('NOT_OWNER', 'แก้ไข/ลบได้เฉพาะกระทู้ของตัวเอง');
+    throw forbidden('NOT_OWNER', 'แก้ไข/ลบได้เฉพาะคำถามของตัวเอง');
   }
   return question;
 };

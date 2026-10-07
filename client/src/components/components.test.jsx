@@ -2,13 +2,14 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import CrisisSupport from './CrisisSupport';
 import DuckAvatar from './DuckAvatar';
 import { YearFilter } from './Filters';
 import LoveButton from './qa/LoveButton';
 import QuestionCard from './qa/QuestionCard';
 import { ReportButton } from './ReportModal';
 import RoomCard from './RoomCard';
-import { Modal, Segmented } from './ui';
+import { Modal, PageTitle, Segmented } from './ui';
 
 vi.mock('../api/questions', () => ({ loveQuestion: vi.fn() }));
 
@@ -37,6 +38,33 @@ const question = {
   author: { id: null, nickname: 'เป็ดนิรนาม', avatar: 'duck-anon', year: null },
   createdAt: new Date().toISOString(),
 };
+
+describe('PageTitle', () => {
+  it('ตั้งชื่อแท็บตามหน้า และคืนชื่อเดิมเมื่อออกจากหน้า', () => {
+    const before = document.title;
+    const { unmount } = render(<PageTitle title="บอร์ดคำถาม" />);
+    expect(document.title).toBe('บอร์ดคำถาม · มัลติเล่า มัลติฟัง');
+    unmount();
+    expect(document.title).toBe(before);
+  });
+});
+
+describe('CrisisSupport', () => {
+  it('มีลิงก์โทรสายด่วนและช่องทางให้คำปรึกษาของ มจธ. และลิงก์ตรงมาที่กล่องนี้ได้', () => {
+    render(<CrisisSupport id="help" />);
+    expect(screen.getByRole('complementary')).toHaveAttribute('id', 'help');
+    expect(screen.getByRole('link', { name: '1323' })).toHaveAttribute('href', 'tel:1323');
+    expect(screen.getByRole('link', { name: '1669' })).toHaveAttribute('href', 'tel:1669');
+    expect(screen.getByRole('link', { name: /0-2470-8105/ })).toHaveAttribute(
+      'href',
+      'tel:024708105',
+    );
+    expect(screen.getByRole('link', { name: 'cps@kmutt.ac.th' })).toHaveAttribute(
+      'href',
+      'mailto:cps@kmutt.ac.th',
+    );
+  });
+});
 
 describe('DuckAvatar', () => {
   it('อวาตาร์ไม่ระบุตัวตนมีป้ายกำกับสำหรับโปรแกรมอ่านหน้าจอ', () => {

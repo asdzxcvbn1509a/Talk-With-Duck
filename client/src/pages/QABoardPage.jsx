@@ -1,11 +1,18 @@
 // Open Q&A Board: กระดานทิ้งคำถาม ตอบได้ไม่จำกัดจำนวนคน (ข้อ 3.5.7)
-import { Pin, Plus } from 'lucide-react';
+import { FilterX, Pin, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { buttonClass } from '../components/buttonClass';
 import { TopicFilter, YearFilter } from '../components/Filters';
 import QuestionCard, { QuestionCardSkeleton } from '../components/qa/QuestionCard';
-import { Button, EmptyState, LoadError, Segmented, SkeletonGroup } from '../components/ui';
+import {
+  Button,
+  EmptyState,
+  LoadError,
+  PageTitle,
+  Segmented,
+  SkeletonGroup,
+} from '../components/ui';
 import { listQuestions } from '../api/questions';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { errorMessage } from '../lib/api';
@@ -16,6 +23,14 @@ const SORTS = [
   { value: 'popular', label: 'ได้ใจมากสุด' },
   { value: 'unanswered', label: 'รอคำตอบ' },
 ];
+
+// บอร์ดว่าง: แยกตามว่ากรองปี/หัวข้ออยู่หรือเปล่า (ไม่ได้กรองแต่บอกว่า "ในหมวดนี้" จะทำให้งง)
+const emptyTitle = (sort, filtered) => {
+  if (sort === 'unanswered') {
+    return filtered ? 'คำถามในหมวดนี้มีคนตอบครบแล้ว' : 'ทุกคำถามมีคนตอบแล้ว เยี่ยมมาก!';
+  }
+  return filtered ? 'ยังไม่มีคำถามในหมวดนี้' : 'ยังไม่มีคำถามบนบอร์ด';
+};
 
 const QABoardPage = () => {
   const filter = useUiStore((s) => s.qaFilter);
@@ -29,6 +44,7 @@ const QABoardPage = () => {
   const items = data?.items ?? [];
   const nextCursor = data?.nextCursor ?? null;
   const error = loadError ? errorMessage(loadError) : null;
+  const filtered = Boolean(filter.year || filter.topic);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const loadMore = async () => {
@@ -52,6 +68,7 @@ const QABoardPage = () => {
   return (
     // มือถือ: เว้นที่ท้ายหน้าให้ปุ่ม "ตั้งคำถาม" แบบลอย ไม่บังปุ่มโหลดเพิ่ม
     <div className="space-y-5 pb-16 md:pb-0">
+      <PageTitle title="บอร์ดคำถาม" />
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-medium sm:text-3xl">
@@ -88,15 +105,22 @@ const QABoardPage = () => {
       ) : items.length === 0 ? (
         <EmptyState
           mascot="duck-glasses"
-          title={
-            filter.sort === 'unanswered'
-              ? 'ทุกคำถามมีคนตอบแล้ว เยี่ยมมาก!'
-              : 'ยังไม่มีคำถามในหมวดนี้'
-          }
+          title={emptyTitle(filter.sort, filtered)}
           action={
-            <Link to="/qa/new" className="link">
-              เป็นคนแรกที่ตั้งคำถาม
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              {filtered && (
+                <Button
+                  variant="soft"
+                  icon={FilterX}
+                  onClick={() => setFilter({ year: null, topic: null })}
+                >
+                  ล้างตัวกรอง
+                </Button>
+              )}
+              <Link to="/qa/new" className="link">
+                {filter.sort === 'unanswered' ? 'ตั้งคำถามใหม่' : 'เป็นคนแรกที่ตั้งคำถาม'}
+              </Link>
+            </div>
           }
         />
       ) : (

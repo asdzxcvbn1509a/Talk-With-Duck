@@ -2,14 +2,18 @@
 // ถ้า token ที่ถูกหมุนไปแล้วถูกนำมาใช้ซ้ำ (หลังพ้นช่วงผ่อนผัน) ถือว่าอาจถูกขโมย → เพิกถอนทั้งตระกูล
 import crypto from 'node:crypto';
 import { env } from '../config/env.js';
-import { REFRESH_REUSE_GRACE_MS } from '../config/constants.js';
+import {
+  BANNED_MESSAGE,
+  REFRESH_REUSE_GRACE_MS,
+  SESSION_EXPIRED_MESSAGE,
+} from '../config/constants.js';
 import { prisma } from '../lib/prisma.js';
 import { hmac, randomToken } from '../lib/crypto.js';
 import { signAccessToken } from '../lib/jwt.js';
 import { unauthorized } from '../utils/httpError.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const sessionExpired = () => unauthorized('SESSION_EXPIRED', 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+const sessionExpired = () => unauthorized('SESSION_EXPIRED', SESSION_EXPIRED_MESSAGE);
 
 const createRefreshToken = async (db, userId, familyId) => {
   const raw = randomToken();
@@ -50,7 +54,7 @@ export const rotateSession = async (rawToken) => {
   const { user } = stored;
   if (user.isBanned) {
     await revokeFamily(stored.familyId);
-    throw unauthorized('BANNED', 'บัญชีนี้ถูกระงับการใช้งาน');
+    throw unauthorized('BANNED', BANNED_MESSAGE);
   }
 
   const refreshToken = await prisma.$transaction(async (tx) => {

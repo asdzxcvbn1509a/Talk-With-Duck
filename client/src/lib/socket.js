@@ -33,8 +33,9 @@ export const getSocket = () => {
       }
     });
 
+    // ข้อความเดียวกับ BANNED_MESSAGE ของ server (server/src/config/constants.js)
     socket.on('auth:banned', () => {
-      toast('บัญชีนี้ถูกระงับการใช้งานเนื่องจากทำผิดข้อตกลงของคอมมูนิตี้', 'error');
+      toast('บัญชีนี้ถูกระงับการใช้งานเพราะทำผิดข้อตกลงพื้นที่ปลอดภัย', 'error');
       disconnectSocket();
       clearSession();
     });

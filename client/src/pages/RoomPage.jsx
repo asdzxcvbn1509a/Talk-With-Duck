@@ -11,7 +11,7 @@ import ParticipantGrid from '../components/room/ParticipantGrid';
 import PreJoin from '../components/room/PreJoin';
 import RoomStatusScreen from '../components/room/RoomStatusScreen';
 import ShareRoomButton from '../components/room/ShareRoomButton';
-import { Badge } from '../components/ui';
+import { Badge, PageTitle } from '../components/ui';
 import { ROOM_TYPES } from '../config/constants';
 import { useLeaveRoomGuard } from '../hooks/useLeaveRoomGuard';
 import { useRoomLifecycle } from '../hooks/useRoomLifecycle';
@@ -55,6 +55,8 @@ const RoomPage = () => {
     () => window.matchMedia?.('(min-width: 1024px)').matches ?? false,
   );
   const unread = useUnread(chatOpen);
+  // ไม่ใช้ชื่อห้องเป็นชื่อแท็บ (ดู PageTitle)
+  const pageTitle = <PageTitle title="ห้องคุย" />;
 
   if (preview?.type === 'karaoke') return <Navigate to={`/karaoke/${id}`} replace />;
 
@@ -63,19 +65,30 @@ const RoomPage = () => {
     ['closed', 'replaced', 'left'].includes(status) || (status === 'error' && !lifecycle.joinError);
   if (ended && !lifecycle.joining) {
     return (
-      <RoomStatusScreen
-        status={status}
-        error={error}
-        onRetry={() => lifecycle.join({ withMic: true })}
-      />
+      <>
+        {pageTitle}
+        <RoomStatusScreen
+          status={status}
+          error={error}
+          onRetry={() => lifecycle.join({ withMic: true })}
+        />
+      </>
     );
   }
-  if (status !== 'joined' || !room) return <PreJoin {...lifecycle} onJoin={lifecycle.join} />;
+  if (status !== 'joined' || !room) {
+    return (
+      <>
+        {pageTitle}
+        <PreJoin {...lifecycle} onJoin={lifecycle.join} />
+      </>
+    );
+  }
 
   const type = ROOM_TYPES[room.type];
 
   return (
     <div className="lg:grid lg:grid-cols-[1fr_360px] lg:gap-6">
+      {pageTitle}
       <section className="min-w-0">
         <header className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">

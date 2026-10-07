@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectedPosition, needsSeek, songOver } from './karaokeSync';
 import { clockTime, timeAgo, yearLabel } from './format';
 import { SPEAKING_THRESHOLD, quantizeLevel, rmsLevel } from './rtc/levels';
@@ -79,8 +79,25 @@ describe('Speaking Indicator', () => {
 });
 
 describe('กิจกรรมประจำวัน', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it('วันใน Duck Community Week แสดงกิจกรรมพิเศษ', () => {
     expect(activityFor(new Date(2026, 11, 15)).special).toBe(true);
+  });
+  it('วันสุดท้าย: ตั้งลิงก์แบบประเมินไว้ → การ์ดพาไปแบบประเมิน (ลิงก์ภายนอก)', () => {
+    vi.stubEnv('VITE_SURVEY_URL', 'https://forms.gle/duck-survey');
+    const a = activityFor(new Date(2026, 11, 18));
+    expect(a.special).toBe(true);
+    expect(a.href).toBe('https://forms.gle/duck-survey');
+    expect(a.to).toBeUndefined();
+    expect(a.detail).toContain('แบบประเมิน');
+  });
+  it('วันสุดท้าย: ยังไม่ตั้งลิงก์แบบประเมิน → ไม่ชวนทำแบบประเมินที่ไม่มีอยู่ และพาไปบอร์ดแทน', () => {
+    vi.stubEnv('VITE_SURVEY_URL', '');
+    const a = activityFor(new Date(2026, 11, 18));
+    expect(a.href).toBeUndefined();
+    expect(a.to).toBe('/qa');
+    expect(a.detail).not.toContain('แบบประเมิน');
   });
   it('วันปกติแสดงข้อความตามวันในสัปดาห์', () => {
     const a = activityFor(new Date(2026, 9, 5));

@@ -12,8 +12,9 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import DuckAvatar from '../components/DuckAvatar';
-import { Badge, Button, EmptyState, Segmented, Spinner } from '../components/ui';
+import { Badge, Button, EmptyState, PageTitle, Segmented, Spinner } from '../components/ui';
 import { REPORT_REASONS, ROOM_TYPES } from '../config/constants';
+import { HOTLINES, KMUTT_COUNSELING } from '../config/helpLines';
 import { listBannedUsers, listReports, readStats, reviewReport, unbanUser } from '../api/admin';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { errorMessage } from '../lib/api';
@@ -22,8 +23,11 @@ import { getSocket } from '../lib/socket';
 import { timeAgo } from '../lib/format';
 import { toast } from '../stores/uiStore';
 
+// สายด่วนที่ผู้ดูแลแนะนำเมื่อมีรายงานความเสี่ยงทำร้ายตัวเอง
+const MENTAL_HEALTH_LINE = HOTLINES.find((line) => line.key === 'dmh');
+
 const TARGET_LABELS = {
-  question: 'กระทู้',
+  question: 'คำถาม',
   answer: 'คำตอบ',
   message: 'ข้อความแชท',
   user: 'ผู้ใช้',
@@ -151,7 +155,7 @@ const TargetPreview = ({ report }) => {
         <>
           <p className="line-clamp-4">{target.content}</p>
           <Link to={`/qa/${target.questionId}`} className="link mt-1 inline-block text-xs">
-            ดูกระทู้
+            ดูคำถาม
           </Link>
         </>
       )}
@@ -234,9 +238,12 @@ const ReportCard = ({ report, onReviewed }) => {
       {urgent && (
         <p className="flex gap-2 rounded-2xl bg-danger-soft p-3 text-sm text-danger">
           <TriangleAlert size={18} className="mt-0.5 shrink-0" />
+          {/* ผู้ดูแลไม่เห็นอีเมลของผู้ใช้ จึงบอกขั้นตอนที่ทำได้จากในเว็บ */}
           <span>
-            อาจมีความเสี่ยงทำร้ายตัวเอง — ควรติดต่อผู้ใช้/อาจารย์ที่ปรึกษาโดยเร็ว
-            และแนะนำสายด่วนสุขภาพจิต 1323
+            อาจมีความเสี่ยงทำร้ายตัวเอง ตรวจรายการนี้ก่อน · ถ้าเป็นคำถามหรือคำตอบ
+            ให้ตอบกลับด้วยความเห็นใจพร้อมช่องทางช่วยเหลือ (สายด่วนสุขภาพจิต{' '}
+            {MENTAL_HEALTH_LINE.number} ฟรี 24 ชั่วโมง · ให้คำปรึกษา มจธ. {KMUTT_COUNSELING.phone})
+            แล้วแจ้งอาจารย์ที่ปรึกษาโครงการ
           </span>
         </p>
       )}
@@ -310,6 +317,7 @@ const AdminReportsPage = () => {
 
   return (
     <div className="space-y-6">
+      <PageTitle title="ดูแลคอมมูนิตี้" />
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-medium sm:text-3xl">
           <ShieldCheck size={28} className="shrink-0 text-calm-700 dark:text-calm-300" />

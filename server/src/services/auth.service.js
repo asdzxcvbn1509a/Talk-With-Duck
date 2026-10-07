@@ -1,6 +1,7 @@
 // ระบบสมาชิก: เข้าสู่ระบบด้วยบัญชี Google → ออก session ด้วย JWT ของเราเอง (ข้อ 3.5.4)
 // จำกัดเฉพาะบางโดเมนได้ด้วย ALLOWED_EMAIL_DOMAINS (เช่น mail.kmutt.ac.th) ค่าเริ่มต้นรับทุกโดเมน
 // เก็บแค่อีเมลกับรหัสบัญชี Google (sub) ไม่เก็บชื่อจริงหรือรูปจาก Google เพื่อคงความเป็นนิรนาม
+import { BANNED_MESSAGE } from '../config/constants.js';
 import { env } from '../config/env.js';
 import { verifyGoogleCredential } from '../lib/google.js';
 import { prisma } from '../lib/prisma.js';
@@ -32,7 +33,7 @@ const assertGoogleOwnsEmail = (payload, email) => {
 
 const assertNotBanned = (user) => {
   if (user.isBanned) {
-    throw forbidden('BANNED', 'บัญชีนี้ถูกระงับการใช้งานเนื่องจากทำผิดข้อตกลงของคอมมูนิตี้');
+    throw forbidden('BANNED', BANNED_MESSAGE);
   }
 };
 

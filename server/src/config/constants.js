@@ -17,6 +17,10 @@ export const STICKER_KEYS = ['clap', 'heart', 'laugh', 'cry', 'fire', 'hug', 'mi
 
 export const RESERVED_NICKNAMES = ['เป็ดนิรนาม', 'admin', 'moderator', 'ผู้ดูแล'];
 
+// ข้อความที่ส่งจากหลายจุด ให้ผู้ใช้เห็นแบบเดียวกัน (บัญชีถูกระงับต้องตรงกับ toast ใน client/src/lib/socket.js)
+export const BANNED_MESSAGE = 'บัญชีนี้ถูกระงับการใช้งานเพราะทำผิดข้อตกลงพื้นที่ปลอดภัย';
+export const SESSION_EXPIRED_MESSAGE = 'เซสชันหมดอายุแล้ว เข้าสู่ระบบอีกครั้งนะ';
+
 export const LIMITS = {
   nicknameMin: 2,
   nicknameMax: 30,
