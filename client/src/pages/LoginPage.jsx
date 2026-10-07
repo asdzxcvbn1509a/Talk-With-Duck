@@ -90,7 +90,7 @@ const LoginPage = () => {
           {error}
         </p>
       )}
-      {/* {import.meta.env.DEV && <DevAccounts onSignedIn={enter} />} */}
+      {import.meta.env.DEV && <DevAccounts onSignedIn={enter} />}
     </AuthShell>
   );
 };

@@ -27,9 +27,11 @@ describe('VolumeControl', () => {
   it('ลากแถบเสียง → จำค่าไว้ และปุ่มบอกระดับที่ปรับ', () => {
     openControl();
     expect(screen.getByRole('heading', { name: 'เสียงของ เป็ดข้างบ้าน' })).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('slider', { name: 'ระดับเสียง' }), {
-      target: { value: '40' },
-    });
+    const slider = screen.getByRole('slider', { name: 'ระดับเสียง' });
+    slider.focus();
+    fireEvent.change(slider, { target: { value: '40' } });
+    // โฟกัสยังอยู่ที่แถบเสียง (กดลูกศรปรับต่อได้) ไม่เด้งไปปุ่มปิดของหน้าต่าง
+    expect(slider).toHaveFocus();
     expect(useUiStore.getState().volumes.u2).toBe(0.4);
     expect(screen.getByRole('button', { name: buttonName })).toHaveTextContent('40%');
   });

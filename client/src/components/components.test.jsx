@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import DuckAvatar from './DuckAvatar';
 import { YearFilter } from './Filters';
 import QuestionCard from './qa/QuestionCard';
+import { ReportButton } from './ReportModal';
 import RoomCard from './RoomCard';
+import { Modal } from './ui';
 
 const question = {
   id: 'q1',
@@ -84,5 +86,41 @@ describe('RoomCard', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('link')).toHaveAttribute('href', '/karaoke/r1');
+  });
+});
+
+describe('Modal', () => {
+  it('ผู้เรียกส่ง onClose ตัวใหม่ทุก render → โฟกัสไม่เด้งไปปุ่มปิด และ Escape เรียกตัวล่าสุด', () => {
+    const first = vi.fn();
+    const latest = vi.fn();
+    const modal = (onClose) => (
+      <Modal open onClose={onClose} title="ทดสอบ">
+        <input aria-label="ช่องพิมพ์" />
+      </Modal>
+    );
+    const { rerender } = render(modal(first));
+    const input = screen.getByRole('textbox', { name: 'ช่องพิมพ์' });
+    input.focus();
+
+    rerender(modal(latest));
+    expect(input).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(first).not.toHaveBeenCalled();
+  });
+});
+
+describe('ReportModal', () => {
+  it('พิมพ์รายละเอียดได้ต่อเนื่อง โฟกัสไม่เด้งไปปุ่มปิดระหว่างพิมพ์', () => {
+    render(<ReportButton target={{ type: 'message', id: 'm1', label: 'ข้อความนี้' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'รายงาน' }));
+    const details = screen.getByLabelText('รายละเอียดเพิ่มเติม (ไม่บังคับ)');
+    details.focus();
+
+    fireEvent.change(details, { target: { value: 'พูดจา' } });
+    fireEvent.change(details, { target: { value: 'พูดจาไม่ดี ซ้ำหลายครั้ง' } });
+    expect(details).toHaveFocus();
+    expect(details).toHaveValue('พูดจาไม่ดี ซ้ำหลายครั้ง');
   });
 });

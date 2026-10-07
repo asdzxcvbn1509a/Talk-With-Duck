@@ -14,7 +14,8 @@ vi.mock('../components/GoogleSignInButton', () => ({
     </button>
   ),
 }));
-vi.mock('../components/DevAccounts', () => ({ default: () => null }));
+// บัญชีทดสอบตัวจริงยิง API (เทสต์ไว้ใน DevAccounts.test.jsx) ที่นี่ดูแค่ว่าหน้าเข้าสู่ระบบแสดงส่วนนี้
+vi.mock('../components/DevAccounts', () => ({ default: () => <p>ปุ่มบัญชีทดสอบ</p> }));
 vi.mock('../api/auth');
 
 const email = 'new.duck@mail.kmutt.ac.th';
@@ -22,7 +23,7 @@ const session = (user) => ({ data: { user: { id: 'u1', email, ...user }, accessT
 const apiError = (code, message) =>
   Object.assign(new Error(code), { response: { status: 400, data: { error: { code, message } } } });
 
-const setup = () => {
+const renderLogin = () => {
   const router = createMemoryRouter(
     [
       { path: '/login', element: <LoginPage /> },
@@ -32,6 +33,10 @@ const setup = () => {
     { initialEntries: ['/login'] },
   );
   render(<RouterProvider router={router} />);
+};
+
+const setup = () => {
+  renderLogin();
   fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
 };
 
@@ -39,6 +44,11 @@ describe('LoginPage (Google)', () => {
   afterEach(() => {
     vi.resetAllMocks();
     useAuthStore.getState().clear();
+  });
+
+  it('ตอนพัฒนาในเครื่อง (npm run dev) มีปุ่มบัญชีทดสอบอยู่ใต้ปุ่ม Google', () => {
+    renderLogin();
+    expect(screen.getByText('ปุ่มบัญชีทดสอบ')).toBeInTheDocument();
   });
 
   it('บัญชีใหม่ → ตั้งชื่อเล่น/ชั้นปี/น้องเป็ด → ไปหน้าข้อตกลง', async () => {

@@ -120,12 +120,12 @@ class RoomSession {
   }
 
   #applySnapshot(ack) {
+    store().setMessages(ack.messages);
     store().patch({
       room: ack.room,
       hostId: ack.room.hostId,
       members: ack.room.members,
       online: ack.online,
-      messages: ack.messages,
       queue: ack.queue,
       karaoke: ack.karaoke,
     });

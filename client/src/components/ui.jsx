@@ -118,10 +118,17 @@ export const EmptyState = ({ icon: IconComponent, title, children, action }) => 
 
 export const Modal = ({ open, onClose, title, children, footer, size = 'md' }) => {
   const ref = useRef(null);
+  // ผู้เรียกมักส่ง onClose เป็นฟังก์ชันใหม่ทุก render จึงเก็บตัวล่าสุดไว้ใน ref
+  // effect ด้านล่างจะได้ย้ายโฟกัสเฉพาะตอนเปิด/ปิด ไม่ดึงโฟกัสไปปุ่มปิดทุกครั้งที่ re-render (เช่น ระหว่างพิมพ์)
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return undefined;
-    const onKey = (e) => e.key === 'Escape' && onClose?.();
+    const onKey = (e) => e.key === 'Escape' && onCloseRef.current?.();
     document.addEventListener('keydown', onKey);
     const previous = document.activeElement;
     ref.current?.querySelector('input, textarea, button, select')?.focus();
@@ -129,7 +136,7 @@ export const Modal = ({ open, onClose, title, children, footer, size = 'md' }) =
       document.removeEventListener('keydown', onKey);
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (

@@ -64,16 +64,19 @@ const Message = ({ message, mine }) => {
 
 const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อง' }) => {
   const messages = useRoomStore((s) => s.messages);
+  const lastId = messages.at(-1)?.id;
   const me = useAuthStore((s) => s.user?.id);
   const [text, setText] = useState('');
   const [showStickers, setShowStickers] = useState(false);
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
 
+  // เลื่อนลงล่างสุดเมื่อมีข้อความใหม่ ดูจากข้อความล่าสุดแทนจำนวนข้อความ
+  // (รายการเก็บแค่ 200 ข้อความล่าสุด พอครบแล้วจำนวนจะไม่เพิ่มอีก)
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length]);
+  }, [lastId]);
 
   const send = async (type, content) => {
     setSending(true);

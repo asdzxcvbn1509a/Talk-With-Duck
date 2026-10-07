@@ -14,7 +14,11 @@ const openApp = async (path) => {
   render(<App />);
 };
 
-describe('App (lazy route)', () => {
+// รันเทสต์ครั้งแรก (cache ยังว่าง) Vite ต้องแปลงไฟล์ของหน้าแบบ lazy route ทีละหลายไฟล์
+// จึงอาจเกิน 1 วินาทีที่ findBy รอโดยปริยาย ทั้งที่แอปทำงานถูกต้อง
+const LAZY_PAGE_WAIT = { timeout: 10_000 };
+
+describe('App (lazy route)', { timeout: 15_000 }, () => {
   beforeEach(() => {
     vi.spyOn(axios, 'post').mockResolvedValue({ status: 204, data: '' });
   });
@@ -22,14 +26,18 @@ describe('App (lazy route)', () => {
   it('ยังไม่ล็อกอินแต่เปิดลิงก์ห้อง → ถูกพาไปหน้า login ที่โหลดแยกไฟล์', async () => {
     await openApp('/room/abc');
 
-    expect(await screen.findByRole('heading', { name: 'เข้าสู่ระบบ' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'เข้าสู่ระบบ' }, LAZY_PAGE_WAIT),
+    ).toBeInTheDocument();
     await waitFor(() => expect(window.location.pathname).toBe('/login'));
   });
 
   it('path ที่ไม่มีอยู่ → หน้าเป็ดหลงทาง', async () => {
     await openApp('/no-such-page');
 
-    expect(await screen.findByRole('heading', { name: 'เป็ดหลงทาง' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'เป็ดหลงทาง' }, LAZY_PAGE_WAIT),
+    ).toBeInTheDocument();
     expect(window.location.pathname).toBe('/no-such-page');
   });
 });

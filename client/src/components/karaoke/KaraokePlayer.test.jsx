@@ -308,6 +308,17 @@ describe('KaraokePlayer', () => {
       });
     });
 
+    it('ขึ้นเพลงถัดไปไม่สำเร็จ (เช่น เน็ตสะดุด) → กดข้ามเพลงซ้ำได้ ไม่ค้างอยู่ที่เพลงที่จบแล้ว', async () => {
+      await openPlayer({ isHost: true });
+      nextSong.mockRejectedValueOnce(new Error('Network Error'));
+      changeState(PLAYER_STATE.PLAYING, PLAYER_STATE.ENDED);
+      await act(async () => {}); // รอให้ request ที่ล้มจบก่อน
+
+      fireEvent.click(screen.getByRole('button', { name: 'ข้ามเพลง' }));
+      expect(nextSong).toHaveBeenCalledTimes(2);
+      expect(nextSong).toHaveBeenLastCalledWith('r1', { reason: 'skipped' });
+    });
+
     it('ได้เป็น host กลางเพลง → ใช้ตัวเล่นเดิมโดยไม่โหลดใหม่ และเล่นต่อตามเวลาของห้องเดิม', async () => {
       let now = Date.now();
       vi.spyOn(Date, 'now').mockImplementation(() => now);

@@ -10,6 +10,9 @@ const initial = {
   members: [],
   online: [], // userId ที่ต่อ socket อยู่
   messages: [],
+  // จำนวนข้อความที่ได้รับทั้งหมดในห้องนี้ ใช้นับข้อความที่ยังไม่อ่าน
+  // (ไม่ลดลงตอนรายการถูกตัดเหลือ 200 ข้อความ หรือตอนผู้ดูแลซ่อนข้อความ)
+  messageTotal: 0,
   queue: [],
   karaoke: null, // สถานะตัวเล่นเพลงล่าสุดจาก host
   clockOffset: 0,
@@ -43,9 +46,18 @@ export const useRoomStore = create((set, get) => ({
     set({ online: [...online] });
   },
 
+  // แทนรายการข้อความทั้งหมด (ตอนเข้าห้อง/ต่อใหม่หลังเน็ตหลุด) · นับเพิ่มเฉพาะข้อความที่ยังไม่เคยได้รับ
+  setMessages: (messages) => {
+    const known = new Set(get().messages.map((m) => m.id));
+    const added = messages.filter((m) => !known.has(m.id)).length;
+    set({ messages, messageTotal: get().messageTotal + added });
+  },
   addMessage: (message) => {
     if (get().messages.some((m) => m.id === message.id)) return;
-    set({ messages: [...get().messages, message].slice(-200) });
+    set({
+      messages: [...get().messages, message].slice(-200),
+      messageTotal: get().messageTotal + 1,
+    });
   },
   hideMessage: (id) => set({ messages: get().messages.filter((m) => m.id !== id) }),
 

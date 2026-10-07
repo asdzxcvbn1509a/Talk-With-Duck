@@ -71,6 +71,9 @@ const KaraokePlayer = ({ roomId, isHost }) => {
       try {
         await nextSong(roomId, { reason });
       } catch (err) {
+        // เปลี่ยนเพลงไม่สำเร็จ (เช่น เน็ตสะดุด): ปลดล็อกให้ลองใหม่ได้ ทั้งกดข้ามอีกครั้ง
+        // และรอบตรวจของ host ที่จะขึ้นเพลงถัดไปให้เองทุก 4 วินาที ไม่งั้นห้องค้างอยู่ที่เพลงที่จบแล้ว
+        if (advancing.current === song.id) advancing.current = null;
         toast(errorMessage(err), 'error');
       }
     },
