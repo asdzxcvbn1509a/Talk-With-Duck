@@ -57,3 +57,10 @@ export const updateProfile = async (patch) => {
   useAuthStore.getState().setUser(data.user);
   return data.user;
 };
+
+/** ลบบัญชีถาวร: server ลบข้อมูลและล้าง refresh cookie แล้ว ฝั่งเว็บเหลือแค่ตัด socket และล้าง session */
+export const deleteAccount = async () => {
+  await meApi.deleteMe();
+  disconnectSocket();
+  clearSession();
+};

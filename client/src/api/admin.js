@@ -1,12 +1,18 @@
 // เรียก /api/admin (เฉพาะผู้ดูแล · รายละเอียดใน docs/api.md)
 import { api } from '../lib/api';
 
-export const readStats = async () => {
-  return await api.get('/admin/stats');
+// params: { from?, to? } เป็น ISO string · from รวมเวลานั้น ส่วน to ไม่รวม
+export const readStats = async (params) => {
+  return await api.get('/admin/stats', { params });
 };
 
 export const listReports = async (params) => {
   return await api.get('/admin/reports', { params });
+};
+
+// จำนวนรายงานที่รอตรวจ { pending, urgent } สำหรับป้ายตัวเลขบนเมนูผู้ดูแล
+export const readReportSummary = async () => {
+  return await api.get('/admin/reports/summary');
 };
 
 export const reviewReport = async (id, data) => {

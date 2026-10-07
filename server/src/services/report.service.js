@@ -105,6 +105,15 @@ export const createReport = async (reporter, { targetType, targetId, reason, det
   }
 };
 
+/** จำนวนรายงานที่รอตรวจ ใช้ทำป้ายตัวเลขบนเมนูผู้ดูแล · urgent = หัวข้อเสี่ยงทำร้ายตัวเอง */
+export const reportSummary = async () => {
+  const [pending, urgent] = await Promise.all([
+    prisma.report.count({ where: { status: 'pending' } }),
+    prisma.report.count({ where: { status: 'pending', reason: 'self_harm' } }),
+  ]);
+  return { pending, urgent };
+};
+
 export const listReports = async ({ status }) => {
   const reports = await prisma.report.findMany({
     where: { status },
@@ -218,5 +227,10 @@ export const reviewReport = async (moderator, reportId, { action }) => {
       reviewedById: moderator.id,
       reviewedAt: new Date(),
     },
+  });
+  // ผู้ดูแลคนอื่นที่ออนไลน์อยู่: อัปเดตป้ายตัวเลขและรายการรายงาน
+  emitToModerators('admin:report-reviewed', {
+    targetType: report.targetType,
+    targetId: report.targetId,
   });
 };

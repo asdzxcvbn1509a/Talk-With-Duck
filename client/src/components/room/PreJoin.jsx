@@ -1,6 +1,6 @@
 // หน้าก่อนเข้าห้อง: ให้ผู้ใช้เลือกเองว่าจะเปิดไมค์หรือไม่ (เคารพขอบเขตความสบายใจ)
 // การกดปุ่ม "เข้าห้อง" เป็น user gesture ที่เบราว์เซอร์ต้องการสำหรับไมค์และการเล่นเสียง
-import { DoorClosed, Headphones, SearchX, UsersRound } from 'lucide-react';
+import { DoorClosed, Headphones, SearchX, UserX, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ROOM_TYPES } from '../../config/constants';
@@ -24,6 +24,11 @@ const JOIN_ERRORS = {
     icon: SearchX,
     title: 'ไม่พบห้องนี้',
     body: 'ลิงก์อาจไม่ถูกต้อง หรือห้องถูกลบไปแล้ว',
+  },
+  ROOM_KICKED: {
+    icon: UserX,
+    title: 'เจ้าของห้องเชิญคุณออกจากห้องนี้แล้ว',
+    body: 'ลองห้องอื่น หรือเปิดห้องใหม่ของตัวเองก็ได้นะ',
   },
 };
 

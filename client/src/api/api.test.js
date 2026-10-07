@@ -23,6 +23,7 @@ const cases = [
 
   ['me.updateMe', () => me.updateMe(data), 'patch', ['/me', data]],
   ['me.acceptGuidelines', () => me.acceptGuidelines(), 'post', ['/me/accept-guidelines']],
+  ['me.deleteMe', () => me.deleteMe(), 'delete', ['/me']],
 
   ['rooms.listRooms', () => rooms.listRooms(params), 'get', ['/rooms', { params }]],
   ['rooms.readRoom', () => rooms.readRoom('r1'), 'get', ['/rooms/r1']],
@@ -72,8 +73,9 @@ const cases = [
 
   ['reports.createReport', () => reports.createReport(data), 'post', ['/reports', data]],
 
-  ['admin.readStats', () => admin.readStats(), 'get', ['/admin/stats']],
+  ['admin.readStats', () => admin.readStats(params), 'get', ['/admin/stats', { params }]],
   ['admin.listReports', () => admin.listReports(params), 'get', ['/admin/reports', { params }]],
+  ['admin.readReportSummary', () => admin.readReportSummary(), 'get', ['/admin/reports/summary']],
   [
     'admin.reviewReport',
     () => admin.reviewReport('p1', data),

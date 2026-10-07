@@ -47,7 +47,8 @@ const KaraokeRoomPage = () => {
   if (preview && preview.type !== 'karaoke') return <Navigate to={`/room/${id}`} replace />;
 
   const ended =
-    ['closed', 'replaced', 'left'].includes(status) || (status === 'error' && !lifecycle.joinError);
+    ['closed', 'replaced', 'left', 'kicked'].includes(status) ||
+    (status === 'error' && !lifecycle.joinError);
   if (ended && !lifecycle.joining) {
     return (
       <>

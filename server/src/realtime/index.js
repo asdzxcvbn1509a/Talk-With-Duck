@@ -169,6 +169,25 @@ const registerRoom = (io, socket) => {
       ack({ ok: false, code: 'INTERNAL' });
     }
   });
+
+  // เจ้าของห้องเชิญคนออก (ห้องกลุ่ม/คาราโอเกะ): เอา socket ของคนนั้นออกจากห้องที่ฝั่ง server เลย
+  // ไม่ต้องรอให้หน้าเว็บของเขายอมออกเอง · คนในห้องได้ room:peer-left แล้วปิดสายเสียงกับคนนั้น
+  socket.on('room:kick', async (payload = {}, ack = noop) => {
+    const roomId = socket.data.roomId;
+    const { userId } = payload;
+    if (!roomId || !UUID_RE.test(String(userId))) return ack({ ok: false, code: 'BAD_REQUEST' });
+    try {
+      const room = await roomService.kickMember(roomId, user.id, userId);
+      if (room.type === 'karaoke') await queueService.dropQueuedSongs(roomId, userId);
+      const target = io.sockets.sockets.get(getSocketId(roomId, userId));
+      if (target) await leaveSocketRoom(io, target, { persist: false });
+      ack({ ok: true });
+    } catch (err) {
+      // error ที่ตั้งใจตอบ (ไม่ใช่เจ้าของห้อง, ห้อง 1-1 ฯลฯ) มี status อยู่แล้ว ไม่ต้อง log
+      if (!err.status) console.error('room:kick failed', err);
+      ack({ ok: false, code: err.code ?? 'INTERNAL', message: err.message });
+    }
+  });
 };
 
 // ซิงก์ตัวเล่นเพลงคาราโอเกะ (ข้อ 3.5.6 ข้อ 3): host เป็นคนจับเวลาของห้อง ส่วนเพลงเล่นเองจนจบ ไม่มีใครหยุดได้

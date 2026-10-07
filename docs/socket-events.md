@@ -35,6 +35,7 @@ Socket.IO บน Express ทำหน้าที่เป็น Signaling Serve
 | `room:join` | `{ roomId }` | `{ ok, room, messages, queue, karaoke, peers, online }` หรือ `{ ok:false, code }` | ต้องเป็นสมาชิก (เรียก REST join ก่อน) |
 | `room:leave` | `{}` | `{ ok }` | ออกจากห้องทันที |
 | `room:mute` | `{ muted }` | – | บันทึกสถานะไมค์ |
+| `room:kick` | `{ userId }` | `{ ok }` หรือ `{ ok:false, code, message }` | เจ้าของห้องเชิญคนออก (ห้องกลุ่ม/คาราโอเกะเท่านั้น) · คนนั้นกลับเข้าห้องเดิมไม่ได้ (REST join ได้ 403 `ROOM_KICKED`) · เพลงที่เขาจองไว้แต่ยังไม่เล่นออกจากคิว · code: `HOST_ONLY`, `KICK_NOT_ALLOWED` (ห้อง 1-1), `CANNOT_KICK_SELF`, `MEMBER_NOT_FOUND`, `ROOM_CLOSED` |
 | `signal` | `{ to: socketId, type: 'offer'/'answer'/'ice', data }` | – | server ส่งต่อเฉพาะเมื่ออยู่ห้องเดียวกัน |
 | `karaoke:state` | `{ songId, videoId, playing, position }` | – | รับจาก host เท่านั้น · host ส่งตอนเพลงเริ่มเล่นและทุก 4 วินาที · server เก็บ `playing: true` เสมอ (ไม่มีใครหยุดเพลงได้) |
 | `karaoke:request-state` | `{}` | สถานะล่าสุด | |
@@ -53,12 +54,14 @@ Socket.IO บน Express ทำหน้าที่เป็น Signaling Serve
 | `room:host-changed` | `{ hostId }` | คนในห้อง |
 | `room:closed` | `{ roomId, reason? }` | คนในห้อง (`reason: 'moderated'` = ผู้ดูแลปิด) |
 | `room:replaced` | `{ roomId }` | แท็บเก่าเมื่อเปิดห้องเดียวกันในแท็บใหม่ |
+| `room:kicked` | `{ roomId }` | คนที่ถูกเชิญออก (ส่งก่อน `room:member-left`) · server เอา socket ของเขาออกจากห้องเอง คนในห้องได้ `room:peer-left` แล้วปิดสายเสียงกับคนนั้น |
 | `signal` | `{ from, fromUserId, type, data }` | ปลายทางของ signal |
 | `chat:message` | ข้อความ | คนในห้อง |
 | `chat:message-hidden` | `{ id }` | คนในห้อง (ผู้ดูแลซ่อน) |
 | `queue:updated` | `{ roomId, queue }` | คนในห้อง |
 | `karaoke:state` | `{ songId, videoId, playing, position, serverTime }` | คนในห้อง ยกเว้น host |
-| `admin:report-created` | `{ id, targetType, reason }` | ผู้ดูแลที่ออนไลน์ |
+| `admin:report-created` | `{ id, targetType, reason }` | ผู้ดูแลที่ออนไลน์ (ทุกหน้า: `reason: 'self_harm'` ขึ้นหน้าต่างชวนไปดูรายงาน หัวข้ออื่นขึ้น toast) |
+| `admin:report-reviewed` | `{ targetType, targetId }` | ผู้ดูแลที่ออนไลน์ (อัปเดตป้ายตัวเลขบนเมนูและรายการรายงาน) |
 | `auth:banned` | – | ผู้ใช้ที่ถูกระงับ (แล้วถูกตัดการเชื่อมต่อ) |
 
 ## การเคลียร์คนที่หลุด

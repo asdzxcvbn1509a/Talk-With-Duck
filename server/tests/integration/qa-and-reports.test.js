@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { prisma } from '../../src/lib/prisma.js';
 import { api, bearer, createUser, hasTestDb, resetDb } from '../helpers.js';
 
 const question = {
@@ -101,6 +102,81 @@ describe.skipIf(!hasTestDb)('Open Q&A Board (ตาราง 3.5)', () => {
     expect(page2.body.nextCursor).toBeNull();
     const titles = [...page1.body.items, ...page2.body.items].map((q) => q.title);
     expect(new Set(titles).size).toBe(5);
+  });
+
+  it('ค้นหาคำถามจากหัวข้อและรายละเอียด ใช้ร่วมกับตัวกรองและ cursor ได้', async () => {
+    const u = await createUser();
+    const ask = async (body) => {
+      const res = await api()
+        .post('/api/questions')
+        .set(bearer(u.token))
+        .send({ ...question, ...body })
+        .expect(201);
+      return res.body.question.id;
+    };
+    await ask({
+      title: 'หาที่ฝึกงานสาย UX ยังไงดี',
+      content: 'อยากได้คำแนะนำ',
+      topic: 'internship',
+    });
+    await ask({ title: 'เรียนตามเพื่อนไม่ทัน', content: 'มีใครเคยฝึกงานช่วงซัมเมอร์บ้าง' });
+    await ask({ title: 'React hooks งงมาก', content: 'useEffect ทำงานตอนไหน' });
+    const hiddenId = await ask({ title: 'ฝึกงานที่ถูกซ่อนไว้', content: 'ผู้ดูแลซ่อนแล้ว' });
+    await prisma.question.update({ where: { id: hiddenId }, data: { isHidden: true } });
+
+    const search = async (query) => {
+      const res = await api().get('/api/questions').query(query).set(bearer(u.token)).expect(200);
+      return res.body;
+    };
+    const titles = (body) => body.items.map((q) => q.title).sort();
+
+    expect(titles(await search({ q: 'ฝึกงาน' }))).toEqual(
+      ['หาที่ฝึกงานสาย UX ยังไงดี', 'เรียนตามเพื่อนไม่ทัน'].sort(),
+    );
+    // ภาษาอังกฤษไม่สนตัวพิมพ์เล็ก/ใหญ่
+    expect(titles(await search({ q: 'REACT' }))).toEqual(['React hooks งงมาก']);
+    expect(titles(await search({ q: 'ฝึกงาน', topic: 'internship' }))).toEqual([
+      'หาที่ฝึกงานสาย UX ยังไงดี',
+    ]);
+    // ช่องค้นหาว่าง = ไม่ได้ค้น
+    expect((await search({ q: '   ' })).items).toHaveLength(3);
+
+    const page1 = await search({ q: 'ฝึกงาน', limit: 1 });
+    expect(page1.items).toHaveLength(1);
+    const page2 = await search({ q: 'ฝึกงาน', limit: 1, cursor: page1.nextCursor });
+    expect(page2.items).toHaveLength(1);
+    expect(page2.nextCursor).toBeNull();
+    expect(page2.items[0].id).not.toBe(page1.items[0].id);
+
+    const tooLong = await api()
+      .get('/api/questions')
+      .query({ q: 'ก'.repeat(101) })
+      .set(bearer(u.token));
+    expect(tooLong.status).toBe(400);
+  });
+
+  it('ค้นคำที่มี % _ หรือ \\ ได้ผลตรงตัวอักษร (ไม่ใช่ wildcard)', async () => {
+    const u = await createUser();
+    const titles = [
+      'ลดราคา 50% จริงไหม',
+      'ตั้งชื่อไฟล์ test_case ยังไง',
+      'ไฟล์อยู่ที่ C:\\temp หาไม่เจอ',
+      'คำถามธรรมดาทั่วไป',
+    ];
+    for (const title of titles) {
+      await api()
+        .post('/api/questions')
+        .set(bearer(u.token))
+        .send({ ...question, title, content: 'รายละเอียด' })
+        .expect(201);
+    }
+    const search = async (q) => {
+      const res = await api().get('/api/questions').query({ q }).set(bearer(u.token)).expect(200);
+      return res.body.items.map((item) => item.title);
+    };
+    expect(await search('%')).toEqual(['ลดราคา 50% จริงไหม']);
+    expect(await search('_')).toEqual(['ตั้งชื่อไฟล์ test_case ยังไง']);
+    expect(await search('C:\\temp')).toEqual(['ไฟล์อยู่ที่ C:\\temp หาไม่เจอ']);
   });
 });
 
@@ -268,11 +344,95 @@ describe.skipIf(!hasTestDb)('ระบบแจ้งรายงานและ
     expect(missing.body.error.code).toBe('USER_NOT_FOUND');
   });
 
-  it('สถิติสำหรับรายงานผลโครงการ', async () => {
+  it('สถิติสำหรับรายงานผลโครงการ: ห้องแยกชั้นปี คนที่ใช้งานจริง และเลือกช่วงเวลาได้', async () => {
     const mod = await createUser({ role: 'moderator', year: 4 });
-    await createUser({ year: 1 });
-    const res = await api().get('/api/admin/stats').set(bearer(mod.token));
-    expect(res.status).toBe(200);
-    expect(res.body.stats.users).toMatchObject({ total: 2, byYear: { 1: 1, 2: 0, 3: 0, 4: 1 } });
+    const member = await createUser({ year: 1 });
+    const early = await createUser({ year: 2 });
+    const openRoom = (who, body) =>
+      api().post('/api/rooms').set(bearer(who.token)).send(body).expect(201);
+    await openRoom(member, { name: 'ห้องปี 1', type: 'group', yearFilter: 1 });
+    await openRoom(mod, { name: 'ห้องร้องเพลง', type: 'karaoke' });
+    await openRoom(early, { name: 'ห้องที่ทีมลองเปิดตอนทดสอบ', type: 'group' });
+
+    // ข้อมูลของ early ย้ายไปอยู่ช่วงทดสอบระบบ (ก่อนเปิดใช้จริง)
+    const testing = new Date('2026-01-15T00:00:00Z');
+    await prisma.user.update({ where: { id: early.user.id }, data: { createdAt: testing } });
+    await prisma.room.updateMany({
+      where: { hostId: early.user.id },
+      data: { createdAt: testing },
+    });
+    await prisma.roomMember.updateMany({
+      where: { userId: early.user.id },
+      data: { joinedAt: testing },
+    });
+
+    const all = await api().get('/api/admin/stats').set(bearer(mod.token)).expect(200);
+    expect(all.body.stats.range).toEqual({ from: null, to: null });
+    expect(all.body.stats.users).toEqual({
+      total: 3,
+      byYear: { 1: 1, 2: 1, 3: 0, 4: 1 },
+      active: 3,
+    });
+    expect(all.body.stats.rooms).toMatchObject({
+      total: 3,
+      byType: { private: 0, group: 2, karaoke: 1 },
+      byYear: { all: 2, 1: 1, 2: 0, 3: 0, 4: 0 },
+    });
+    expect(all.body.stats.karaoke.participants).toBe(1);
+
+    const range = { from: '2026-06-01T00:00:00.000Z', to: '2099-01-01T00:00:00.000Z' };
+    const live = await api().get('/api/admin/stats').query(range).set(bearer(mod.token));
+    expect(live.status).toBe(200);
+    expect(live.body.stats.range).toEqual(range);
+    expect(live.body.stats.users).toEqual({
+      total: 2,
+      byYear: { 1: 1, 2: 0, 3: 0, 4: 1 },
+      active: 2,
+    });
+    expect(live.body.stats.rooms).toMatchObject({
+      total: 2,
+      byYear: { all: 1, 1: 1, 2: 0, 3: 0, 4: 0 },
+      // ห้องที่เปิดอยู่ตอนนี้ไม่ขึ้นกับช่วงเวลา
+      activeNow: 3,
+    });
+
+    const reversed = await api()
+      .get('/api/admin/stats')
+      .query({ from: range.to, to: range.from })
+      .set(bearer(mod.token));
+    expect(reversed.status).toBe(400);
+  });
+
+  it('ผู้ดูแลเห็นจำนวนรายงานที่รอตรวจ แยกหัวข้อเสี่ยงทำร้ายตัวเอง', async () => {
+    const author = await createUser();
+    const first = await createUser();
+    const second = await createUser();
+    const mod = await createUser({ role: 'moderator' });
+    const q = await api().post('/api/questions').set(bearer(author.token)).send(question);
+    const target = { targetType: 'question', targetId: q.body.question.id };
+    const urgent = await api()
+      .post('/api/reports')
+      .set(bearer(first.token))
+      .send({ ...target, reason: 'self_harm' })
+      .expect(201);
+    await api()
+      .post('/api/reports')
+      .set(bearer(second.token))
+      .send({ ...target, reason: 'other' })
+      .expect(201);
+
+    const notMod = await api().get('/api/admin/reports/summary').set(bearer(first.token));
+    expect(notMod.status).toBe(403);
+    const before = await api().get('/api/admin/reports/summary').set(bearer(mod.token));
+    expect(before.body).toEqual({ pending: 2, urgent: 1 });
+
+    // ตรวจแล้วปิดทุกรายงานของเป้าหมายเดียวกัน
+    await api()
+      .patch(`/api/admin/reports/${urgent.body.id}`)
+      .set(bearer(mod.token))
+      .send({ action: 'dismiss' })
+      .expect(204);
+    const after = await api().get('/api/admin/reports/summary').set(bearer(mod.token));
+    expect(after.body).toEqual({ pending: 0, urgent: 0 });
   });
 });

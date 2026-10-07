@@ -48,6 +48,8 @@ const router = createBrowserRouter(
       </Route>
 
       <Route path="/" element={<Navigate to="/lobby" replace />} />
+      {/* อ่านได้โดยไม่ต้องเข้าสู่ระบบ (ลิงก์จากหน้าเข้าสู่ระบบ) */}
+      <Route path="/privacy" lazy={lazyPage(() => import('./pages/PrivacyPage'))} />
       <Route path="*" lazy={lazyPage(() => import('./pages/NotFoundPage'))} />
     </Route>,
   ),

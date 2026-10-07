@@ -1,7 +1,7 @@
 // เข้าสู่ระบบด้วยบัญชี Google · เข้าครั้งแรกจะให้ตั้งชื่อเล่น/ชั้นปี/น้องเป็ดก่อน
 import { AudioLines, MessageCircleQuestionMark, MicVocal } from 'lucide-react';
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import AuthShell from '../components/AuthShell';
 import DevAccounts from '../components/DevAccounts';
 import GoogleSignInButton from '../components/GoogleSignInButton';
@@ -103,6 +103,13 @@ const LoginPage = () => {
       <AuthShell
         title="มาเป็นเป็ดในบ่อเดียวกัน"
         subtitle="ตั้งชื่อเล่นกับเลือกน้องเป็ดก่อนเริ่ม ไม่ต้องใช้ชื่อจริง"
+        footer={
+          // เปิดแท็บใหม่: ถ้าออกจากหน้านี้ ข้อมูลจาก Google ที่รอตั้งโปรไฟล์จะหาย ต้องกดปุ่ม Google ใหม่
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="link">
+            ระบบเก็บข้อมูลอะไรบ้าง
+            <span className="sr-only"> (เปิดในแท็บใหม่)</span>
+          </a>
+        }
       >
         <PageTitle title="ตั้งโปรไฟล์" />
         <ProfileSetupForm
@@ -129,6 +136,9 @@ const LoginPage = () => {
       footer={
         <>
           เข้าครั้งแรกจะให้ตั้งชื่อเล่นและเลือกน้องเป็ด ระบบไม่ใช้ชื่อจริงหรือรูปจากบัญชี Google
+          <Link to="/privacy" className="link mt-2 block w-fit mx-auto">
+            นโยบายความเป็นส่วนตัว
+          </Link>
           {/* ช่องทางติดต่อแสดงเมื่อทีมตั้ง VITE_CONTACT_URL ไว้ (เช่น บัญชีถูกระงับ หรืออีเมลผูกกับบัญชีอื่น) */}
           {contactUrl() && (
             <span className="mt-2 block">

@@ -29,3 +29,27 @@ export const clockTime = (date) => {
 export const yearLabel = (year) => {
   return year ? `ปี ${year}` : 'ทุกชั้นปี';
 };
+
+// แสดงวันที่แบบ "14 ธ.ค. 69"
+export const shortDate = (date) => {
+  return dateFormat.format(new Date(date));
+};
+
+const pad = (n) => String(n).padStart(2, '0');
+
+// วันที่ตามเวลาของเครื่องแบบ YYYY-MM-DD (ค่าที่ <input type="date"> ใช้)
+export const localYmd = (date = new Date()) => {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+/**
+ * ช่วงวันตามเวลาของเครื่อง (ใช้กับสถิติในหน้าผู้ดูแล) รับวันที่แบบ YYYY-MM-DD เช่น จาก <input type="date">
+ * คืน { from, to } เป็น ISO string: from = เที่ยงคืนของวันแรก, to = เที่ยงคืนของวันถัดจากวันสุดท้าย (ไม่รวม)
+ */
+export const dayRange = (fromYmd, toYmd) => {
+  // ไม่ใส่ timezone ท้ายวันที่ = เวลาตามเครื่องของผู้ใช้
+  const start = new Date(`${fromYmd}T00:00:00`);
+  const end = new Date(`${toYmd}T00:00:00`);
+  end.setDate(end.getDate() + 1);
+  return { from: start.toISOString(), to: end.toISOString() };
+};

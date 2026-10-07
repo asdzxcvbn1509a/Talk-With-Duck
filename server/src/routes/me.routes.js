@@ -10,5 +10,7 @@ router.use(requireAuth);
 router.get('/', me.getMe);
 router.patch('/', validate({ body: updateMeBody }), me.updateMe);
 router.post('/accept-guidelines', me.acceptGuidelines);
+// ลบบัญชีถาวร: ไม่ต้องยอมรับข้อตกลงก่อน ใครที่ล็อกอินได้ก็ลบบัญชีตัวเองได้
+router.delete('/', me.deleteMe);
 
 export default router;

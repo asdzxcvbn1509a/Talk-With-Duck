@@ -1,6 +1,7 @@
-// หน้าจอเมื่อหลุดจากห้องด้วยเหตุต่าง ๆ (ห้องปิด / เปิดซ้ำในแท็บอื่น / เชื่อมต่อไม่สำเร็จ)
-import { AppWindow, CloudOff, DoorClosed, Hand, ShieldAlert } from 'lucide-react';
+// หน้าจอเมื่อหลุดจากห้องด้วยเหตุต่าง ๆ (ห้องปิด / เปิดซ้ำในแท็บอื่น / ถูกเชิญออก / เชื่อมต่อไม่สำเร็จ)
+import { AppWindow, CloudOff, DoorClosed, Hand, ShieldAlert, UserX } from 'lucide-react';
 import { Link } from 'react-router';
+import { errorCode } from '../../lib/api';
 import { Button, EmptyState } from '../ui';
 
 const SCREENS = {
@@ -13,6 +14,11 @@ const SCREENS = {
     icon: ShieldAlert,
     title: 'ผู้ดูแลปิดห้องนี้แล้ว',
     body: 'ห้องนี้ถูกปิดเพื่อรักษาพื้นที่ปลอดภัยของทุกคน',
+  },
+  kicked: {
+    icon: UserX,
+    title: 'เจ้าของห้องเชิญคุณออกจากห้องนี้',
+    body: 'ลองห้องอื่น หรือเปิดห้องใหม่ของตัวเองก็ได้นะ',
   },
   replaced: {
     icon: AppWindow,
@@ -31,9 +37,16 @@ const SCREENS = {
   },
 };
 
+// เน็ตหลุดตอนถูกเชิญออก: ต่อกลับมาแล้วเข้าห้องเดิมไม่ได้ (ROOM_KICKED) ก็แสดงว่าถูกเชิญออกเหมือนกัน
+const screenKey = (status, error) => {
+  if (status === 'kicked' || errorCode(error) === 'ROOM_KICKED') return 'kicked';
+  if (status === 'closed' && error === 'moderated') return 'moderated';
+  return status;
+};
+
 const RoomStatusScreen = ({ status, error, onRetry, backTo = '/lobby' }) => {
-  const screen =
-    SCREENS[status === 'closed' && error === 'moderated' ? 'moderated' : status] ?? SCREENS.error;
+  const key = screenKey(status, error);
+  const screen = SCREENS[key] ?? SCREENS.error;
   return (
     <div className="mx-auto max-w-md pt-8">
       <EmptyState
@@ -41,7 +54,7 @@ const RoomStatusScreen = ({ status, error, onRetry, backTo = '/lobby' }) => {
         title={screen.title}
         action={
           <div className="flex flex-wrap justify-center gap-2">
-            {onRetry && ['replaced', 'error', 'left'].includes(status) && (
+            {onRetry && ['replaced', 'error', 'left'].includes(key) && (
               <Button onClick={onRetry}>เข้าห้องอีกครั้ง</Button>
             )}
             <Link to={backTo} className="link inline-flex h-11 items-center rounded-full px-5">

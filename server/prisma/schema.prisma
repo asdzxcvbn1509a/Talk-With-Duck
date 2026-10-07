@@ -154,6 +154,8 @@ model RoomMember {
   isMuted  Boolean   @default(false) @map("is_muted")
   joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
   leftAt   DateTime? @map("left_at") @db.Timestamptz(6)
+  // เจ้าของห้องเชิญออก = กลับเข้าห้องนี้ไม่ได้อีก
+  kickedAt DateTime? @map("kicked_at") @db.Timestamptz(6)
 
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -250,7 +252,8 @@ model SongQueue {
 
 model Report {
   id           String       @id @default(uuid()) @db.Uuid
-  reporterId   String       @map("reporter_id") @db.Uuid
+  // null = ผู้รายงานลบบัญชีไปแล้ว (รายงานยังอยู่ให้ผู้ดูแลจัดการต่อ)
+  reporterId   String?      @map("reporter_id") @db.Uuid
   targetType   ReportTarget @map("target_type")
   targetId     String       @map("target_id") @db.Uuid
   reason       ReportReason
@@ -260,7 +263,7 @@ model Report {
   reviewedAt   DateTime?    @map("reviewed_at") @db.Timestamptz(6)
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  reporter   User  @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporter   User? @relation("Reporter", fields: [reporterId], references: [id], onDelete: SetNull)
   reviewedBy User? @relation("Reviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@unique([reporterId, targetType, targetId])

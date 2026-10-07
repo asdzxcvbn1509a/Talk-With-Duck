@@ -190,6 +190,12 @@ class RoomSession {
       this.#teardown();
       s().patch({ status: 'replaced' });
     });
+    // เจ้าของห้องเชิญเราออก (server เอาเราออกจากห้องแล้ว): ปิดห้องฝั่งเรา แล้วบอกเหตุผล
+    on('room:kicked', ({ roomId }) => {
+      if (roomId !== this.roomId) return;
+      this.#teardown();
+      s().patch({ status: 'kicked' });
+    });
 
     on('chat:message', (message) => s().addMessage(message));
     on('chat:message-hidden', ({ id }) => s().hideMessage(id));
@@ -245,6 +251,21 @@ class RoomSession {
 
   sendMessage(type, content) {
     return postMessage(this.roomId, { type, content });
+  }
+
+  /** เจ้าของห้องเชิญคนออก (ห้องกลุ่ม/คาราโอเกะ) · ไม่สำเร็จจะ throw พร้อมข้อความภาษาไทยจาก server */
+  async kick(userId) {
+    let ack;
+    try {
+      ack = await this.socket.timeout(5000).emitWithAck('room:kick', { userId });
+    } catch {
+      throw new Error('เชิญออกไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่นะ');
+    }
+    if (!ack.ok) {
+      throw Object.assign(new Error(ack.message ?? 'เชิญออกไม่สำเร็จ ลองใหม่อีกครั้งนะ'), {
+        code: ack.code,
+      });
+    }
   }
 
   async leave() {

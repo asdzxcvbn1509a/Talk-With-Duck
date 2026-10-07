@@ -14,6 +14,8 @@ const optionalYear = z.preprocess(
   (v) => (v === '' || v === 'all' ? undefined : v),
   year.optional(),
 );
+// ช่องที่ไม่ได้กรอก (ว่างหรือมีแต่ช่องว่าง) = ไม่ได้ส่งมา
+const blankToUndefined = (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v);
 
 export const idParam = z.object({ id: z.uuid('รหัสไม่ถูกต้อง') });
 
@@ -72,6 +74,8 @@ export const listQuestionsQuery = z.object({
   year: optionalYear,
   topic: z.preprocess((v) => (v === '' || v === 'all' ? undefined : v), topic.optional()),
   sort: z.enum(['latest', 'popular', 'unanswered']).default('latest'),
+  // ค้นหาจากหัวข้อและรายละเอียดของคำถาม
+  q: z.preprocess(blankToUndefined, z.string().trim().max(100, 'คำค้นยาวเกินไป').optional()),
   cursor: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
@@ -117,3 +121,10 @@ export const listReportsQuery = z.object({
   status: z.enum(['pending', 'actioned', 'dismissed']).default('pending'),
 });
 export const reviewReportBody = z.object({ action: z.enum(['hide', 'ban', 'dismiss']) });
+// สถิติตามช่วงเวลา (เช่น เฉพาะช่วง Duck Community Week): from รวมเวลานั้น ส่วน to ไม่รวม
+export const statsQuery = z
+  .object({ from: z.iso.datetime().optional(), to: z.iso.datetime().optional() })
+  .refine(
+    ({ from, to }) => !from || !to || new Date(from) < new Date(to),
+    'วันเริ่มต้นต้องมาก่อนวันสิ้นสุด',
+  );

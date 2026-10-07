@@ -112,4 +112,40 @@ describe('roomSession', () => {
     expect(rtc.readIceServers).toHaveBeenCalledTimes(2);
     expect(socket.emitWithAck).toHaveBeenCalledWith('room:join', { roomId: 'r1' });
   });
+
+  it('ถูกเชิญออก (room:kicked) → ปิดห้องฝั่งเรา และสถานะเป็น kicked (event ของห้องอื่นไม่สนใจ)', async () => {
+    await session.join('r1', { withMic: false });
+    const { useRoomStore } = await import('../stores/roomStore');
+    const handler = (event) => socket.on.mock.calls.find(([name]) => name === event)[1];
+
+    handler('room:kicked')({ roomId: 'other-room' });
+    expect(useRoomStore.getState().status).toBe('joined');
+
+    handler('room:kicked')({ roomId: 'r1' });
+    expect(useRoomStore.getState().status).toBe('kicked');
+    // ถอด handler ของห้องออกจาก socket แล้ว (ไม่รับ event ของห้องนี้อีก)
+    expect(socket.off).toHaveBeenCalledWith('room:kicked', expect.any(Function));
+  });
+
+  it('เชิญออก: ส่ง room:kick · server ไม่ยอมจะได้ error พร้อมข้อความและ code จาก server', async () => {
+    await session.join('r1', { withMic: false });
+
+    socket.emitWithAck.mockResolvedValueOnce({ ok: true });
+    await session.kick('u2');
+    expect(socket.emitWithAck).toHaveBeenLastCalledWith('room:kick', { userId: 'u2' });
+
+    socket.emitWithAck.mockResolvedValueOnce({
+      ok: false,
+      code: 'HOST_ONLY',
+      message: 'เฉพาะเจ้าของห้องที่เชิญคนออกได้',
+    });
+    await expect(session.kick('u2')).rejects.toMatchObject({
+      code: 'HOST_ONLY',
+      message: 'เฉพาะเจ้าของห้องที่เชิญคนออกได้',
+    });
+
+    // ส่งไม่ถึง server (หมดเวลา): บอกเป็นภาษาไทย
+    socket.emitWithAck.mockRejectedValueOnce(new Error('operation has timed out'));
+    await expect(session.kick('u2')).rejects.toThrow('เชิญออกไม่สำเร็จ');
+  });
 });

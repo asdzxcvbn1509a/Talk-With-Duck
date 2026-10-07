@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { expectedPosition, needsSeek, songOver } from './karaokeSync';
-import { clockTime, timeAgo, yearLabel } from './format';
+import { clockTime, dayRange, timeAgo, yearLabel } from './format';
 import { SPEAKING_THRESHOLD, quantizeLevel, rmsLevel } from './rtc/levels';
 import { activityFor } from '../config/dailyActivities';
 import { useRoomStore } from '../stores/roomStore';
@@ -60,6 +60,14 @@ describe('format', () => {
         year: '2-digit',
       }),
     );
+  });
+  it('ช่วงวันของสถิติ: ตั้งแต่เที่ยงคืนวันแรก ถึงก่อนเที่ยงคืนของวันถัดจากวันสุดท้าย (เวลาตามเครื่อง)', () => {
+    const { from, to } = dayRange('2026-12-14', '2026-12-18');
+    expect(new Date(from)).toEqual(new Date(2026, 11, 14));
+    expect(new Date(to)).toEqual(new Date(2026, 11, 19));
+    // วันเดียวกันก็ได้ช่วง 1 วันเต็ม
+    const oneDay = dayRange('2026-12-31', '2026-12-31');
+    expect(new Date(oneDay.to)).toEqual(new Date(2027, 0, 1));
   });
 });
 

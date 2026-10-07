@@ -5,6 +5,7 @@ import { SPEAKING_THRESHOLD } from '../../lib/rtc/levels';
 import { useRoomStore } from '../../stores/roomStore';
 import DuckAvatar from '../DuckAvatar';
 import { ReportButton } from '../ReportModal';
+import KickButton from './KickButton';
 import VolumeControl from './VolumeControl';
 
 const ParticipantTile = ({
@@ -15,6 +16,7 @@ const ParticipantTile = ({
   connecting = false,
   size = 88,
   compact = false,
+  canKick = false,
 }) => {
   // อ่านระดับเสียงของคนนี้เอง: ตอนมีคนพูด render ใหม่เฉพาะช่องของคนนั้น ไม่ใช่ทั้งห้อง
   const level = useRoomStore((s) => s.levels[member.userId] ?? 0);
@@ -64,7 +66,13 @@ const ParticipantTile = ({
           {status && ` · ${status}`}
         </p>
       </div>
-      {!isMe && <VolumeControl member={member} />}
+      {!isMe && (
+        <div className="flex items-center gap-0.5">
+          <VolumeControl member={member} />
+          {/* เฉพาะเจ้าของห้องกลุ่ม/คาราโอเกะ (ParticipantGrid เป็นคนตัดสิน) */}
+          {canKick && <KickButton member={member} />}
+        </div>
+      )}
       {/* จอที่ใช้เมาส์ซ่อนปุ่มรายงานจนกว่าจะชี้ จอสัมผัส (รวมแท็บเล็ต) แสดงจาง ๆ ไว้ตลอดเพราะไม่มี hover */}
       {!isMe && (
         <ReportButton

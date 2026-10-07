@@ -1,6 +1,6 @@
-// Open Q&A Board: กระดานทิ้งคำถาม ตอบได้ไม่จำกัดจำนวนคน (ข้อ 3.5.7)
-import { FilterX, Pin, Plus } from 'lucide-react';
-import { useState } from 'react';
+// Open Q&A Board: กระดานทิ้งคำถาม ตอบได้ไม่จำกัดจำนวนคน ค้นหาด้วยคำได้ (ข้อ 3.5.7)
+import { FilterX, Pin, Plus, Search, SearchX, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { buttonClass } from '../components/buttonClass';
 import { TopicFilter, YearFilter } from '../components/Filters';
@@ -8,6 +8,7 @@ import QuestionCard, { QuestionCardSkeleton } from '../components/qa/QuestionCar
 import {
   Button,
   EmptyState,
+  IconButton,
   LoadError,
   PageTitle,
   Segmented,
@@ -24,21 +25,54 @@ const SORTS = [
   { value: 'unanswered', label: 'รอคำตอบ' },
 ];
 
-// บอร์ดว่าง: แยกตามว่ากรองปี/หัวข้ออยู่หรือเปล่า (ไม่ได้กรองแต่บอกว่า "ในหมวดนี้" จะทำให้งง)
-const emptyTitle = (sort, filtered) => {
+// รอให้หยุดพิมพ์ก่อนค่อยค้น จะได้ไม่ยิงคำขอทุกตัวอักษร
+const SEARCH_DELAY_MS = 400;
+
+// บอร์ดว่าง: แยกตามว่าค้นหรือกรองปี/หัวข้ออยู่หรือเปล่า (ไม่ได้กรองแต่บอกว่า "ในหมวดนี้" จะทำให้งง)
+const emptyTitle = (sort, filtered, q) => {
+  if (q) {
+    const what = sort === 'unanswered' ? 'คำถามที่รอคำตอบ' : 'คำถาม';
+    return `ไม่พบ${what}ที่มีคำว่า “${q}”${filtered ? ' ในหมวดนี้' : ''}`;
+  }
   if (sort === 'unanswered') {
     return filtered ? 'คำถามในหมวดนี้มีคนตอบครบแล้ว' : 'ทุกคำถามมีคนตอบแล้ว เยี่ยมมาก!';
   }
   return filtered ? 'ยังไม่มีคำถามในหมวดนี้' : 'ยังไม่มีคำถามบนบอร์ด';
 };
 
+const emptyLinkText = (sort, q) => {
+  if (q) return 'ตั้งคำถามนี้เลย';
+  return sort === 'unanswered' ? 'ตั้งคำถามใหม่' : 'เป็นคนแรกที่ตั้งคำถาม';
+};
+
 const QABoardPage = () => {
   const filter = useUiStore((s) => s.qaFilter);
   const setFilter = useUiStore((s) => s.setQaFilter);
+  // คำที่กำลังพิมพ์ · ส่งไปค้นจริง (filter.q) หลังหยุดพิมพ์
+  const [text, setText] = useState(filter.q);
   const params = {
     year: filter.year ?? undefined,
     topic: filter.topic ?? undefined,
     sort: filter.sort,
+    q: filter.q || undefined,
+  };
+
+  useEffect(() => {
+    const q = text.trim();
+    if (q === filter.q) return undefined;
+    const timer = setTimeout(() => setFilter({ q }), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [text, filter.q, setFilter]);
+
+  // กด Enter: ค้นทันทีไม่ต้องรอ
+  const submitSearch = (e) => {
+    e.preventDefault();
+    setFilter({ q: text.trim() });
+  };
+
+  const clearSearch = () => {
+    setText('');
+    setFilter({ q: '' });
   };
   const { data, error: loadError, loading, setData, retry } = useApiQuery(listQuestions, params);
   const items = data?.items ?? [];
@@ -83,6 +117,33 @@ const QABoardPage = () => {
       </header>
 
       <div className="space-y-2">
+        <form role="search" onSubmit={submitSearch} className="relative">
+          <Search
+            size={18}
+            className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+            aria-hidden="true"
+          />
+          <input
+            className="input pr-12 pl-11"
+            inputMode="search"
+            enterKeyHint="search"
+            maxLength={100}
+            placeholder="ค้นหาคำถาม เช่น ฝึกงาน"
+            aria-label="ค้นหาคำถาม"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          {text && (
+            <IconButton
+              icon={X}
+              label="ล้างคำค้นหา"
+              size={36}
+              iconSize={18}
+              className="absolute top-1/2 right-2 -translate-y-1/2"
+              onClick={clearSearch}
+            />
+          )}
+        </form>
         <Segmented
           label="เรียงลำดับ"
           options={SORTS}
@@ -105,9 +166,14 @@ const QABoardPage = () => {
       ) : items.length === 0 ? (
         <EmptyState
           mascot="duck-glasses"
-          title={emptyTitle(filter.sort, filtered)}
+          title={emptyTitle(filter.sort, filtered, filter.q)}
           action={
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              {filter.q && (
+                <Button variant="soft" icon={SearchX} onClick={clearSearch}>
+                  ล้างการค้นหา
+                </Button>
+              )}
               {filtered && (
                 <Button
                   variant="soft"
@@ -118,11 +184,13 @@ const QABoardPage = () => {
                 </Button>
               )}
               <Link to="/qa/new" className="link">
-                {filter.sort === 'unanswered' ? 'ตั้งคำถามใหม่' : 'เป็นคนแรกที่ตั้งคำถาม'}
+                {emptyLinkText(filter.sort, filter.q)}
               </Link>
             </div>
           }
-        />
+        >
+          {filter.q && 'ลองคำที่สั้นลงหรือคำอื่น หรือตั้งเป็นคำถามใหม่ให้เพื่อน ๆ ช่วยตอบ'}
+        </EmptyState>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

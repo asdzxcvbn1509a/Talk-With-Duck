@@ -240,4 +240,116 @@ describe.skipIf(!hasTestDb)('Socket.IO (Signaling Server และข้อม�
     expect(ack.ok).toBe(true);
     expect((await replaced).roomId).toBe(roomId);
   });
+
+  it('เจ้าของห้องเชิญแขกออก: แขกหลุดจากห้อง ส่ง signal ต่อไม่ได้ และกลับเข้าห้องเดิมไม่ได้', async () => {
+    const { host, guest, roomId, hostSocket, guestSocket } = await roomWithTwo();
+    await hostSocket.emitWithAck('room:join', { roomId });
+    await guestSocket.emitWithAck('room:join', { roomId });
+
+    const kicked = nextEvent(guestSocket, 'room:kicked');
+    const peerLeft = nextEvent(hostSocket, 'room:peer-left');
+    const memberLeft = nextEvent(hostSocket, 'room:member-left');
+    expect(await hostSocket.emitWithAck('room:kick', { userId: guest.user.id })).toEqual({
+      ok: true,
+    });
+    expect(await kicked).toEqual({ roomId });
+    expect((await peerLeft).socketId).toBe(guestSocket.id);
+    expect((await memberLeft).userId).toBe(guest.user.id);
+
+    // socket ของแขกถูกเอาออกจากห้องที่ฝั่ง server แล้ว: ส่ง signal หาเจ้าของห้องไม่ถึง
+    const blocked = noEvent(hostSocket, 'signal');
+    guestSocket.emit('signal', { to: hostSocket.id, type: 'offer', data: {} });
+    await blocked;
+
+    const rejoin = await request(server).post(`/api/rooms/${roomId}/join`).set(bearer(guest.token));
+    expect(rejoin.status).toBe(403);
+    expect(rejoin.body.error.code).toBe('ROOM_KICKED');
+    const room = await request(server)
+      .get(`/api/rooms/${roomId}`)
+      .set(bearer(host.token))
+      .expect(200);
+    expect(room.body.room.members.map((m) => m.userId)).toEqual([host.user.id]);
+  });
+
+  it('เชิญออก: ทำได้เฉพาะเจ้าของห้อง เชิญตัวเองไม่ได้ และห้อง 1-1 เชิญออกไม่ได้', async () => {
+    const group = await roomWithTwo();
+    await group.hostSocket.emitWithAck('room:join', { roomId: group.roomId });
+    await group.guestSocket.emitWithAck('room:join', { roomId: group.roomId });
+    expect(
+      await group.guestSocket.emitWithAck('room:kick', { userId: group.host.user.id }),
+    ).toMatchObject({ ok: false, code: 'HOST_ONLY' });
+    expect(
+      await group.hostSocket.emitWithAck('room:kick', { userId: group.host.user.id }),
+    ).toMatchObject({ ok: false, code: 'CANNOT_KICK_SELF' });
+
+    const pair = await roomWithTwo('private');
+    await pair.hostSocket.emitWithAck('room:join', { roomId: pair.roomId });
+    expect(
+      await pair.hostSocket.emitWithAck('room:kick', { userId: pair.guest.user.id }),
+    ).toMatchObject({ ok: false, code: 'KICK_NOT_ALLOWED' });
+  });
+
+  it('เชิญออกในห้องคาราโอเกะ: เพลงที่คนนั้นจองไว้แต่ยังไม่เล่นออกจากคิว', async () => {
+    const { host, guest, roomId, hostSocket, guestSocket } = await roomWithTwo('karaoke');
+    await hostSocket.emitWithAck('room:join', { roomId });
+    await guestSocket.emitWithAck('room:join', { roomId });
+    const addSong = (who, n) =>
+      request(server)
+        .post(`/api/rooms/${roomId}/queue`)
+        .set(bearer(who.token))
+        .send({ videoId: `song${n}`.padEnd(11, 'x'), title: `เพลงที่ ${n}` })
+        .expect(201);
+    await addSong(guest, 1); // เล่นทันที
+    await addSong(guest, 2);
+    await addSong(host, 3);
+
+    expect(await hostSocket.emitWithAck('room:kick', { userId: guest.user.id })).toEqual({
+      ok: true,
+    });
+    const res = await request(server)
+      .get(`/api/rooms/${roomId}/queue`)
+      .set(bearer(host.token))
+      .expect(200);
+    // เพลงที่กำลังเล่นยังอยู่ (เจ้าของห้องกดข้ามเองได้)
+    expect(res.body.queue.map((s) => [s.title, s.status])).toEqual([
+      ['เพลงที่ 1', 'playing'],
+      ['เพลงที่ 3', 'queued'],
+    ]);
+  });
+
+  it('ผู้ดูแลที่ออนไลน์ได้รับแจ้งเมื่อมีรายงานใหม่ และเมื่อรายงานถูกตรวจแล้ว', async () => {
+    const mod = await createUser({ role: 'moderator' });
+    const member = await createUser();
+    const author = await createUser();
+    const modSocket = await connected(socketFor(mod.token));
+    const memberSocket = await connected(socketFor(member.token));
+    const question = await request(server)
+      .post('/api/questions')
+      .set(bearer(author.token))
+      .send({ title: 'ช่วงนี้ไม่ไหวแล้วจริง ๆ', content: 'เหนื่อยมาก', topic: 'life' })
+      .expect(201);
+    const targetId = question.body.question.id;
+
+    const created = nextEvent(modSocket, 'admin:report-created');
+    const notForMembers = noEvent(memberSocket, 'admin:report-created');
+    const report = await request(server)
+      .post('/api/reports')
+      .set(bearer(member.token))
+      .send({ targetType: 'question', targetId, reason: 'self_harm' })
+      .expect(201);
+    expect(await created).toEqual({
+      id: report.body.id,
+      targetType: 'question',
+      reason: 'self_harm',
+    });
+    await notForMembers;
+
+    const reviewed = nextEvent(modSocket, 'admin:report-reviewed');
+    await request(server)
+      .patch(`/api/admin/reports/${report.body.id}`)
+      .set(bearer(mod.token))
+      .send({ action: 'dismiss' })
+      .expect(204);
+    expect(await reviewed).toEqual({ targetType: 'question', targetId });
+  });
 });

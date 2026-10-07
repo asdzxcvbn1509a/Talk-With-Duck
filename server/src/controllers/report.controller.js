@@ -21,6 +21,14 @@ export const list = async (req, res, next) => {
   }
 };
 
+export const summary = async (_req, res, next) => {
+  try {
+    res.json(await reportService.reportSummary());
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const review = async (req, res, next) => {
   try {
     await reportService.reviewReport(req.user, req.valid.params.id, req.valid.body);
@@ -47,9 +55,9 @@ export const unban = async (req, res, next) => {
   }
 };
 
-export const stats = async (_req, res, next) => {
+export const stats = async (req, res, next) => {
   try {
-    res.json({ stats: await adminService.getStats() });
+    res.json({ stats: await adminService.getStats(req.valid.query) });
   } catch (err) {
     next(err);
   }

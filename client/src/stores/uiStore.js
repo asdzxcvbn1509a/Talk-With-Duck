@@ -1,5 +1,6 @@
 // สถานะการแสดงผลบนหน้าจอ (ข้อ 3.5.3: uiStore): toast, สถานะปลุก server, ตัวกรองที่เลือกไว้,
-// ระดับเสียงของเพื่อนแต่ละคนที่ผู้ใช้ปรับเอง (จำไว้ในเบราว์เซอร์ข้ามการรีเฟรช), โหมดสว่าง/มืด
+// ระดับเสียงของเพื่อนแต่ละคนที่ผู้ใช้ปรับเอง (จำไว้ในเบราว์เซอร์ข้ามการรีเฟรช), โหมดสว่าง/มืด,
+// จำนวนรายงานที่รอตรวจ (ป้ายบนเมนูผู้ดูแล)
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { toPlaybackVolume } from '../lib/rtc/volume';
@@ -19,7 +20,10 @@ export const useUiStore = create(
       toasts: [],
       waking: false, // server บน Render กำลังตื่นจาก cold start
       lobbyFilter: { year: null, type: null },
-      qaFilter: { year: null, topic: null, sort: 'latest' },
+      // q = คำค้นในบอร์ดคำถาม ('' = ไม่ได้ค้น)
+      qaFilter: { year: null, topic: null, sort: 'latest', q: '' },
+      // จำนวนรายงานที่รอตรวจ (เฉพาะผู้ดูแล · hooks/useModeratorAlerts.js) urgent = เสี่ยงทำร้ายตัวเอง
+      reportSummary: { pending: 0, urgent: 0 },
       // มีผลเฉพาะเครื่องนี้ เพื่อนในห้องไม่รู้ (components/room/VolumeControl.jsx)
       volumes: {}, // userId -> ระดับเสียง 0–1 (ไม่มี key = 100%)
       mutedUsers: {}, // userId -> true ถ้าปิดเสียงคนนั้นไว้
@@ -36,6 +40,7 @@ export const useUiStore = create(
       setWaking: (waking) => set({ waking }),
       setLobbyFilter: (patch) => set({ lobbyFilter: { ...get().lobbyFilter, ...patch } }),
       setQaFilter: (patch) => set({ qaFilter: { ...get().qaFilter, ...patch } }),
+      setReportSummary: (reportSummary) => set({ reportSummary }),
       setTheme: (theme) => {
         setThemePreference(theme);
         set({ theme });

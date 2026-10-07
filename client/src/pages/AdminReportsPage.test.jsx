@@ -1,10 +1,25 @@
-// หน้าผู้ดูแล: บัญชีที่ถูกระงับขึ้นเป็นรายการ และปลดระงับได้หลังกดยืนยัน
+// หน้าผู้ดูแล: บัญชีที่ถูกระงับขึ้นเป็นรายการ และปลดระงับได้หลังกดยืนยัน · สถิติเลือกช่วงเวลาได้
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createMemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as adminApi from '../api/admin';
 import { confirmDialog } from '../lib/dialog';
 import AdminReportsPage from './AdminReportsPage';
+
+const stats = {
+  range: { from: null, to: null },
+  users: { total: 40, byYear: { 1: 15, 2: 10, 3: 9, 4: 6 }, active: 31 },
+  rooms: {
+    total: 12,
+    byType: { private: 5, group: 4, karaoke: 3 },
+    byYear: { all: 6, 1: 3, 2: 1, 3: 2, 4: 0 },
+    activeNow: 2,
+  },
+  qa: { questions: 20, answers: 55, loves: 80 },
+  messages: 300,
+  karaoke: { participants: 14, songsPlayed: 33 },
+  reports: { pending: 1 },
+};
 
 vi.mock('../api/admin');
 vi.mock('../lib/dialog');
@@ -84,5 +99,69 @@ describe('AdminReportsPage (บัญชีที่ถูกระงับ)', 
 
     expect(await screen.findByRole('button', { name: 'ปลดระงับ เป็ดดื้อ' })).toBeInTheDocument();
     expect(adminApi.reviewReport).toHaveBeenCalledWith('p1', { action: 'ban' });
+  });
+
+  it('ผู้รายงานลบบัญชีไปแล้ว: รายงานยังแสดง และบอกว่าเป็นบัญชีที่ลบไปแล้ว', async () => {
+    vi.mocked(adminApi.listReports).mockResolvedValue({
+      data: { reports: [{ ...report, reporter: null }] },
+    });
+    vi.mocked(adminApi.listBannedUsers).mockResolvedValue({ data: { users: [] } });
+    setup();
+    expect(await screen.findByText('ผู้รายงาน: บัญชีที่ลบไปแล้ว')).toBeInTheDocument();
+  });
+});
+
+describe('AdminReportsPage (สถิติตามตัวชี้วัดข้อ 4.6)', () => {
+  beforeEach(() => {
+    vi.mocked(adminApi.readStats).mockResolvedValue({ data: { stats } });
+    vi.mocked(adminApi.listReports).mockResolvedValue({ data: { reports: [] } });
+    vi.mocked(adminApi.listBannedUsers).mockResolvedValue({ data: { users: [] } });
+  });
+
+  afterEach(() => vi.resetAllMocks());
+
+  it('แสดงคนที่ใช้งานจริง และจำนวนห้องแยกตามชั้นปี', async () => {
+    setup();
+    expect(await screen.findByText('ใช้งานจริง')).toBeInTheDocument();
+    expect(screen.getByText('31')).toBeInTheDocument();
+    expect(
+      screen.getByText('แยกชั้นปี: ปี1 3 · ปี2 1 · ปี3 2 · ปี4 0 · ทุกชั้นปี 6'),
+    ).toBeInTheDocument();
+    // ไม่ได้เลือกช่วงเวลา = นับทั้งหมด
+    expect(adminApi.readStats).toHaveBeenCalledWith(undefined);
+  });
+
+  it('เลือก Duck Community Week → ขอสถิติเฉพาะวันที่ 14–18 ธ.ค. (นับถึงก่อนเที่ยงคืนวันที่ 19)', async () => {
+    setup();
+    await screen.findByText('ใช้งานจริง');
+    fireEvent.click(screen.getByRole('button', { name: 'Duck Week' }));
+    expect(screen.getByText(/Duck Community Week:/)).toBeInTheDocument();
+    await waitFor(() => expect(adminApi.readStats).toHaveBeenCalledTimes(2));
+    expect(adminApi.readStats).toHaveBeenLastCalledWith({
+      from: new Date(2026, 11, 14).toISOString(),
+      to: new Date(2026, 11, 19).toISOString(),
+    });
+    // เลือกช่วงแล้วการ์ดสมาชิกนับเฉพาะคนที่สมัครในช่วงนั้น
+    expect(await screen.findByText('สมาชิกใหม่')).toBeInTheDocument();
+  });
+
+  it('เลือกวันเองแต่วันเริ่มอยู่หลังวันสิ้นสุด: ยังไม่ขอสถิติ และบอกให้เลือกใหม่', async () => {
+    setup();
+    await screen.findByText('ใช้งานจริง');
+    fireEvent.click(screen.getByRole('button', { name: 'เลือกวันเอง' }));
+    await waitFor(() => expect(adminApi.readStats).toHaveBeenCalledTimes(2));
+
+    fireEvent.change(screen.getByLabelText('ตั้งแต่วันที่'), { target: { value: '2026-12-20' } });
+    fireEvent.change(screen.getByLabelText('ถึงวันที่'), { target: { value: '2026-12-01' } });
+    expect(await screen.findByText(/วันเริ่มต้องไม่หลังวันสิ้นสุด/)).toBeInTheDocument();
+    expect(adminApi.readStats).toHaveBeenCalledTimes(2);
+
+    fireEvent.change(screen.getByLabelText('ถึงวันที่'), { target: { value: '2026-12-31' } });
+    await waitFor(() =>
+      expect(adminApi.readStats).toHaveBeenLastCalledWith({
+        from: new Date(2026, 11, 20).toISOString(),
+        to: new Date(2027, 0, 1).toISOString(),
+      }),
+    );
   });
 });

@@ -2,9 +2,9 @@
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { clearKaraokeState } from '../realtime/karaokeState.js';
-import { emitToLobby, emitToRoom } from '../realtime/hub.js';
+import { emitToLobby, emitToRoom, emitToUser } from '../realtime/hub.js';
 import { presentRoom } from '../utils/present.js';
-import { conflict, forbidden, notFound } from '../utils/httpError.js';
+import { badRequest, conflict, forbidden, notFound } from '../utils/httpError.js';
 
 const userSelect = { select: { id: true, nickname: true, avatar: true, year: true } };
 
@@ -71,6 +71,12 @@ const addMemberTx = async (tx, roomId, userId) => {
   if (!room || !room.isActive) throw notFound('ROOM_CLOSED', 'ห้องนี้ปิดไปแล้ว');
 
   const existing = await tx.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
+  if (existing?.kickedAt) {
+    throw forbidden(
+      'ROOM_KICKED',
+      'เจ้าของห้องเชิญคุณออกจากห้องนี้แล้ว ลองห้องอื่นหรือเปิดห้องใหม่นะ',
+    );
+  }
   if (existing && !existing.leftAt) return { member: existing, joined: false };
 
   const activeCount = await tx.roomMember.count({ where: { roomId, leftAt: null } });
@@ -164,6 +170,43 @@ export const leaveRoom = async (roomId, userId) => {
     emitToRoom(roomId, 'room:closed', { roomId });
   }
   await broadcastRoomSummary(roomId);
+};
+
+/**
+ * เจ้าของห้องเชิญสมาชิกออก (ห้องกลุ่ม/คาราโอเกะ) · คนที่ถูกเชิญออกกลับเข้าห้องนี้ไม่ได้อีก
+ * ห้อง 1-1 เชิญออกไม่ได้ ถ้าไม่สบายใจก็ออกจากห้องเองได้เลย
+ * การเอา socket ของคนนั้นออกจากห้องอยู่ที่ room:kick ใน realtime/index.js · คืนข้อมูลห้อง
+ */
+export const kickMember = async (roomId, hostId, userId) => {
+  if (userId === hostId) {
+    throw badRequest('CANNOT_KICK_SELF', 'เชิญตัวเองออกไม่ได้ ถ้าจะไปกดออกจากห้องได้เลย');
+  }
+  const room = await prisma.$transaction(async (tx) => {
+    await lockRoom(tx, roomId);
+    const current = await tx.room.findUnique({ where: { id: roomId } });
+    if (!current?.isActive) throw notFound('ROOM_CLOSED', 'ห้องนี้ปิดไปแล้ว');
+    if (current.type === 'private') {
+      throw badRequest(
+        'KICK_NOT_ALLOWED',
+        'ห้อง 1-1 เชิญออกไม่ได้ ถ้าไม่สบายใจ กดออกจากห้องได้เลยนะ',
+      );
+    }
+    if (current.hostId !== hostId) {
+      throw forbidden('HOST_ONLY', 'เฉพาะเจ้าของห้องที่เชิญคนออกได้');
+    }
+    const member = await tx.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
+    if (!member || member.leftAt) throw notFound('MEMBER_NOT_FOUND', 'คนนี้ออกจากห้องไปแล้ว');
+
+    const now = new Date();
+    await tx.roomMember.update({ where: { id: member.id }, data: { leftAt: now, kickedAt: now } });
+    return current;
+  });
+
+  // แจ้งคนที่ถูกเชิญออกก่อน หน้าเว็บของเขาจะได้ปิดห้องพร้อมบอกเหตุผล (ก่อนได้รับ room:member-left)
+  emitToUser(userId, 'room:kicked', { roomId });
+  emitToRoom(roomId, 'room:member-left', { userId });
+  await broadcastRoomSummary(roomId);
+  return room;
 };
 
 /** สุ่มจับคู่ห้อง 1-1: เข้าห้องที่มีคนรออยู่ 1 คน ถ้าไม่มีให้เปิดห้องใหม่ */

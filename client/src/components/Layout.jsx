@@ -9,6 +9,7 @@ import {
   User,
 } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation, useNavigation } from 'react-router';
+import { useModeratorAlerts } from '../hooks/useModeratorAlerts';
 import { useAuthStore, selectIsModerator } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
 import DuckAvatar from './DuckAvatar';
@@ -72,9 +73,28 @@ export const WakingBanner = () => {
   );
 };
 
+// จำนวนรายงานที่รอตรวจบนเมนูผู้ดูแล (โปรแกรมอ่านหน้าจออ่านเป็นประโยค)
+const PendingBadge = ({ count }) => {
+  return (
+    <>
+      <span
+        className="min-w-5 rounded-full bg-danger-strong px-1.5 text-center text-xs leading-5 font-bold text-white"
+        aria-hidden="true"
+      >
+        {count > 99 ? '99+' : count}
+      </span>
+      <span className="sr-only">รายงานรอตรวจ {count} รายการ</span>
+    </>
+  );
+};
+
 const Layout = () => {
   const user = useAuthStore((s) => s.user);
   const isModerator = useAuthStore(selectIsModerator);
+  const pendingReports = useUiStore((s) => s.reportSummary.pending);
+  // ผู้ดูแล: รู้เมื่อมีรายงานใหม่ทุกหน้า และเมนูบอกจำนวนที่รอตรวจ
+  useModeratorAlerts(isModerator);
+  const showPending = isModerator && pendingReports > 0;
   const { pathname } = useLocation();
   const focus = FOCUS_ROUTES.some((re) => re.test(pathname));
   // กำลังโหลดโค้ดของหน้าถัดไป (lazy route): หน้าเดิมยังแสดงอยู่ แสดงแถบบาง ๆ ให้รู้ว่ากดติดแล้ว
@@ -136,6 +156,7 @@ const Layout = () => {
                 <Shield size={18} />
                 {/* จอแท็บเล็ตเหลือแค่ไอคอน เมนูจะได้พอในแถวเดียว */}
                 <span className="sr-only lg:not-sr-only">ผู้ดูแล</span>
+                {showPending && <PendingBadge count={pendingReports} />}
               </NavLink>
             )}
           </nav>
@@ -184,15 +205,22 @@ const Layout = () => {
                   <>
                     {/* เมนูที่เลือกอยู่มีแคปซูลสีเหลืองรองหลังไอคอน (ชื่อเมนูใช้สีตัวอักษรปกติ อ่านง่ายกว่าตัวอักษรสีเหลือง) */}
                     <span
-                      className={`flex h-7 w-14 items-center justify-center rounded-full transition ${
+                      className={`relative flex h-7 w-14 items-center justify-center rounded-full transition ${
                         isActive
                           ? 'bg-duck-200 text-on-duck dark:bg-duck-700/40 dark:text-duck-200'
                           : ''
                       }`}
                     >
                       <item.icon size={22} />
+                      {/* จอมือถือไม่มีเมนูผู้ดูแล: จุดแดงที่ "ฉัน" บอกว่ามีรายงานรอตรวจ (เข้าได้จากหน้า "ฉัน") */}
+                      {item.to === '/me' && showPending && (
+                        <span className="absolute top-0 right-2.5 h-2.5 w-2.5 rounded-full bg-danger-strong ring-2 ring-surface" />
+                      )}
                     </span>
                     {item.label}
+                    {item.to === '/me' && showPending && (
+                      <span className="sr-only"> (รายงานรอตรวจ {pendingReports} รายการ)</span>
+                    )}
                   </>
                 )}
               </NavLink>

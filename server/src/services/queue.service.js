@@ -97,6 +97,18 @@ export const removeSong = async (roomId, userId, songId) => {
   return broadcastQueue(roomId);
 };
 
+/**
+ * คนที่ถูกเชิญออกจากห้อง: เพลงที่จองไว้แต่ยังไม่ได้เล่นออกจากคิว
+ * (เพลงที่กำลังเล่นอยู่ปล่อยไว้ เจ้าของห้องกดข้ามเองได้)
+ */
+export const dropQueuedSongs = async (roomId, userId) => {
+  const { count } = await prisma.songQueue.updateMany({
+    where: { roomId, requestedBy: userId, status: 'queued' },
+    data: { status: 'skipped' },
+  });
+  if (count > 0) await broadcastQueue(roomId);
+};
+
 export const nextSong = async (roomId, userId, { reason }) => {
   const room = await getKaraokeRoom(roomId);
   if (room.hostId !== userId) throw forbidden('HOST_ONLY', 'เฉพาะเจ้าของห้องที่เปลี่ยนเพลงได้');

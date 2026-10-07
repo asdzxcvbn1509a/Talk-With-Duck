@@ -1,4 +1,5 @@
 import * as userService from '../services/user.service.js';
+import { clearRefreshCookie } from '../utils/cookies.js';
 import { selfUser } from '../utils/present.js';
 
 export const getMe = (req, res, next) => {
@@ -22,6 +23,16 @@ export const acceptGuidelines = async (req, res, next) => {
   try {
     const user = await userService.acceptGuidelines(req.user.id);
     res.json({ user: selfUser(user) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteMe = async (req, res, next) => {
+  try {
+    await userService.deleteAccount(req.user);
+    clearRefreshCookie(res);
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

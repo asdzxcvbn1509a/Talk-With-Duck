@@ -10,6 +10,9 @@ const ParticipantGrid = ({ tileSize = 88, compact = false }) => {
   // ไม่อ่านระดับเสียง (levels) ที่นี่: เปลี่ยนทุก 100 ms แต่ละช่อง (ParticipantTile) อ่านของตัวเองแทน
   const members = useRoomStore((s) => s.members);
   const hostId = useRoomStore((s) => s.hostId);
+  const roomType = useRoomStore((s) => s.room?.type);
+  // เจ้าของห้องเชิญคนอื่นออกได้ เฉพาะห้องกลุ่มและห้องคาราโอเกะ (ห้อง 1-1 ออกจากห้องเองแทน)
+  const canKick = hostId === me.id && (roomType === 'group' || roomType === 'karaoke');
   const online = useRoomStore((s) => s.online);
   const streams = useRoomStore((s) => s.streams);
   const peerStates = useRoomStore((s) => s.peerStates);
@@ -40,6 +43,7 @@ const ParticipantGrid = ({ tileSize = 88, compact = false }) => {
                 }
                 size={tileSize}
                 compact={compact}
+                canKick={canKick && !isMe}
               />
             </li>
           );

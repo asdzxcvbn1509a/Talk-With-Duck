@@ -62,7 +62,8 @@ const RoomPage = () => {
 
   // หลุดระหว่างอยู่ในห้อง (ถ้าเข้าห้องไม่สำเร็จตั้งแต่แรก PreJoin จะแสดงสาเหตุเอง)
   const ended =
-    ['closed', 'replaced', 'left'].includes(status) || (status === 'error' && !lifecycle.joinError);
+    ['closed', 'replaced', 'left', 'kicked'].includes(status) ||
+    (status === 'error' && !lifecycle.joinError);
   if (ended && !lifecycle.joining) {
     return (
       <>

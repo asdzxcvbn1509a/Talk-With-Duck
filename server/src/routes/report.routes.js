@@ -3,7 +3,13 @@ import * as reports from '../controllers/report.controller.js';
 import { requireAuth, requireGuidelines, requireModerator } from '../middleware/auth.js';
 import { postLimiter } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
-import { createReportBody, idParam, listReportsQuery, reviewReportBody } from '../schemas.js';
+import {
+  createReportBody,
+  idParam,
+  listReportsQuery,
+  reviewReportBody,
+  statsQuery,
+} from '../schemas.js';
 
 export const reportRouter = Router();
 reportRouter.post(
@@ -18,6 +24,7 @@ reportRouter.post(
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireModerator);
 adminRouter.get('/reports', validate({ query: listReportsQuery }), reports.list);
+adminRouter.get('/reports/summary', reports.summary);
 adminRouter.patch(
   '/reports/:id',
   validate({ params: idParam, body: reviewReportBody }),
@@ -25,4 +32,4 @@ adminRouter.patch(
 );
 adminRouter.get('/bans', reports.bans);
 adminRouter.delete('/bans/:id', validate({ params: idParam }), reports.unban);
-adminRouter.get('/stats', reports.stats);
+adminRouter.get('/stats', validate({ query: statsQuery }), reports.stats);

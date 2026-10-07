@@ -32,6 +32,19 @@ describe('App (lazy route)', { timeout: 15_000 }, () => {
     await waitFor(() => expect(window.location.pathname).toBe('/login'));
   });
 
+  it('ยังไม่ล็อกอินก็เปิดนโยบายความเป็นส่วนตัวได้ (ไม่ถูกพาไปหน้า login)', async () => {
+    await openApp('/privacy');
+
+    expect(
+      await screen.findByRole('heading', { name: 'นโยบายความเป็นส่วนตัว' }, LAZY_PAGE_WAIT),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/privacy');
+    expect(screen.getByRole('link', { name: /กลับไปหน้าเข้าสู่ระบบ/ })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+  });
+
   it('path ที่ไม่มีอยู่ → หน้าเป็ดหลงทาง', async () => {
     await openApp('/no-such-page');
 

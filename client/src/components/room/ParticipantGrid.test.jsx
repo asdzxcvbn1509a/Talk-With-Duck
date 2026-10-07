@@ -1,4 +1,5 @@
 // รายชื่อในห้อง: เสียงของเพื่อนแต่ละคนเล่นตามระดับที่ผู้ฟังปรับไว้ใน uiStore
+// · ปุ่มเชิญออกมีเฉพาะเจ้าของห้องกลุ่ม/คาราโอเกะ
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '../../stores/authStore';
@@ -47,5 +48,25 @@ describe('ParticipantGrid', () => {
 
     expect(screen.getByRole('button', { name: 'ปรับเสียงของ เป็ดข้างบ้าน' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ปรับเสียงของ เป็ดตัวเอง' })).toBeNull();
+  });
+
+  it('เจ้าของห้องกลุ่มเห็นปุ่มเชิญออกบนช่องของคนอื่น แต่ไม่มีบนช่องตัวเอง', () => {
+    useRoomStore.setState({ room: { id: 'r1', type: 'group' } });
+    render(<ParticipantGrid />);
+    expect(
+      screen.getByRole('button', { name: 'เชิญ เป็ดข้างบ้าน ออกจากห้อง' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'เชิญ เป็ดตัวเอง ออกจากห้อง' })).toBeNull();
+  });
+
+  it('ห้อง 1-1 หรือไม่ใช่เจ้าของห้อง → ไม่มีปุ่มเชิญออก', () => {
+    useRoomStore.setState({ room: { id: 'r1', type: 'private' } });
+    const { unmount } = render(<ParticipantGrid />);
+    expect(screen.queryByRole('button', { name: /ออกจากห้อง/ })).toBeNull();
+    unmount();
+
+    useRoomStore.setState({ room: { id: 'r1', type: 'group' }, hostId: 'u2' });
+    render(<ParticipantGrid />);
+    expect(screen.queryByRole('button', { name: /ออกจากห้อง/ })).toBeNull();
   });
 });

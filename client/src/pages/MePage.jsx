@@ -4,22 +4,25 @@ import {
   Flag,
   LifeBuoy,
   Lock,
+  LockKeyhole,
   LogOut,
   Monitor,
   Moon,
   Send,
   Shield,
   Sun,
+  UserX,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import DuckAvatar from '../components/DuckAvatar';
 import { AvatarPicker, YearPicker } from '../components/ProfilePickers';
-import { Button, Field, PageTitle, Segmented } from '../components/ui';
+import { Badge, Button, Field, PageTitle, Segmented } from '../components/ui';
 import { LIMITS } from '../config/constants';
 import { contactUrl, surveyUrl } from '../config/links';
 import { errorMessage } from '../lib/api';
-import { logout, updateProfile } from '../lib/auth';
+import { deleteAccount, logout, updateProfile } from '../lib/auth';
+import { confirmDialog } from '../lib/dialog';
 import { roomSession } from '../lib/roomSession';
 import { useAuthStore } from '../stores/authStore';
 import { toast, useUiStore } from '../stores/uiStore';
@@ -47,7 +50,9 @@ const MePage = () => {
   const user = useAuthStore((s) => s.user);
   const theme = useUiStore((s) => s.theme);
   const setTheme = useUiStore((s) => s.setTheme);
+  const pendingReports = useUiStore((s) => s.reportSummary.pending);
   const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     nickname: user.nickname,
     year: user.year,
@@ -78,6 +83,31 @@ const MePage = () => {
     }
     await logout();
     navigate('/login', { replace: true });
+  };
+
+  const removeAccount = async () => {
+    const confirmed = await confirmDialog({
+      title: 'ลบบัญชีถาวรใช่ไหม?',
+      text: 'คำถาม คำตอบ ข้อความแชท ใจที่ส่ง และเพลงที่จองไว้จะถูกลบทั้งหมด กู้คืนไม่ได้',
+      confirmText: 'ลบบัญชี',
+      icon: UserX,
+      danger: true,
+    });
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await roomSession.leave();
+    } catch {
+      // ออกจากห้องไม่สำเร็จ: ลบบัญชีต่อได้ (server พาออกจากห้องให้ตอนลบบัญชีอยู่แล้ว)
+    }
+    try {
+      await deleteAccount();
+      toast('ลบบัญชีแล้ว ขอบคุณที่เคยแวะมาที่บ่อเป็ดนะ', 'success');
+      navigate('/login', { replace: true });
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+      setDeleting(false);
+    }
   };
 
   return (
@@ -137,6 +167,9 @@ const MePage = () => {
         <Link to="/guidelines#help" className={MENU_ROW_CLASS}>
           <LifeBuoy size={20} /> ช่องทางขอความช่วยเหลือ
         </Link>
+        <Link to="/privacy" className={MENU_ROW_CLASS}>
+          <LockKeyhole size={20} /> นโยบายความเป็นส่วนตัว
+        </Link>
         {/* ลิงก์ภายนอกแสดงเฉพาะเมื่อทีมตั้งค่าไว้ (config/links.js) */}
         {surveyUrl() && (
           <ExternalRow href={surveyUrl()} icon={ClipboardCheck}>
@@ -151,6 +184,11 @@ const MePage = () => {
         {user.role === 'moderator' && (
           <Link to="/admin/reports" className={MENU_ROW_CLASS}>
             <Flag size={20} /> จัดการรายงาน (ผู้ดูแล)
+            {pendingReports > 0 && (
+              <Badge tone="danger" className="ml-auto">
+                รอตรวจ {pendingReports}
+              </Badge>
+            )}
           </Link>
         )}
         <button
@@ -161,6 +199,31 @@ const MePage = () => {
           <LogOut size={20} /> ออกจากระบบ
         </button>
       </nav>
+
+      <section className="card space-y-3 p-6" aria-labelledby="delete-account">
+        <h2 id="delete-account" className="text-lg font-medium">
+          ลบบัญชี
+        </h2>
+        {user.role === 'moderator' ? (
+          <p className="text-sm text-muted">
+            บัญชีผู้ดูแลลบเองไม่ได้ ถ้าจะเลิกเป็นผู้ดูแล ให้ทีมเปลี่ยนสิทธิ์เป็นสมาชิกก่อน
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-muted">
+              คำถาม คำตอบ ข้อความแชท ใจที่ส่ง และเพลงที่จองไว้จะถูกลบทั้งหมด กู้คืนไม่ได้
+              ส่วนรายงานที่เคยส่งยังอยู่ให้ผู้ดูแลจัดการต่อโดยไม่บอกว่าใครส่ง · เข้าด้วย Google
+              อีกครั้งได้ แต่จะเป็นบัญชีใหม่
+            </p>
+            <Button variant="danger" icon={UserX} loading={deleting} onClick={removeAccount}>
+              ลบบัญชีของฉัน
+            </Button>
+          </>
+        )}
+        <Link to="/privacy" className="link block text-sm">
+          ระบบเก็บข้อมูลอะไรบ้าง
+        </Link>
+      </section>
     </div>
   );
 };

@@ -14,12 +14,24 @@ const questionInclude = (viewer) => ({
 const questionNotFound = () => notFound('QUESTION_NOT_FOUND', 'ไม่พบคำถามนี้ (อาจถูกลบไปแล้ว)');
 const isModerator = (viewer) => viewer.role === 'moderator';
 
-export const listQuestions = async (viewer, { year, topic, sort, cursor, limit }) => {
+/**
+ * ค้นจากหัวข้อและรายละเอียด (ไม่สนตัวพิมพ์เล็ก/ใหญ่ของภาษาอังกฤษ)
+ * Prisma ส่ง contains ไปเป็น LIKE โดยไม่ escape ให้: ต้องใส่ \ หน้า % และ _ เอง
+ * ไม่อย่างนั้นค้น "%" จะได้ทุกคำถาม
+ */
+const searchFilter = (q) => {
+  if (!q) return {};
+  const match = { contains: q.replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' };
+  return { OR: [{ title: match }, { content: match }] };
+};
+
+export const listQuestions = async (viewer, { year, topic, sort, q, cursor, limit }) => {
   const where = {
     isHidden: false,
     tagYear: year,
     topic,
     ...(sort === 'unanswered' ? { answers: { none: { isHidden: false } } } : {}),
+    ...searchFilter(q),
   };
   const orderBy =
     sort === 'popular'
