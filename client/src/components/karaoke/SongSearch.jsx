@@ -5,7 +5,12 @@ import { readKaraokeConfig, resolveSong, searchSongs } from '../../api/karaoke';
 import { addSong } from '../../api/rooms';
 import { errorMessage } from '../../lib/api';
 import { toast } from '../../stores/uiStore';
-import { Button, Spinner } from '../ui';
+import { Button, Segmented, Spinner } from '../ui';
+
+const MODES = [
+  { value: 'search', label: 'ค้นหาเพลง' },
+  { value: 'link', label: 'วางลิงก์ YouTube' },
+];
 
 const Result = ({ song, onAdd, adding }) => {
   return (
@@ -95,29 +100,15 @@ const SongSearch = ({ roomId }) => {
   return (
     <div className="space-y-3">
       {searchEnabled && (
-        <div
-          className="flex gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold"
-          role="tablist"
-        >
-          {[
-            ['search', 'ค้นหาเพลง'],
-            ['link', 'วางลิงก์ YouTube'],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={mode === key}
-              onClick={() => {
-                setMode(key);
-                setResults([]);
-              }}
-              className={`flex-1 rounded-full py-2 transition ${mode === key ? 'bg-surface shadow' : 'text-muted'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="วิธีจองเพลง"
+          options={MODES}
+          value={mode}
+          onChange={(key) => {
+            setMode(key);
+            setResults([]);
+          }}
+        />
       )}
       <form onSubmit={submit} className="flex gap-2">
         <input
@@ -131,7 +122,7 @@ const SongSearch = ({ roomId }) => {
           type="submit"
           disabled={loading || !query.trim()}
           aria-label="ค้นหา"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-duck-400 text-[#3B2F1E] disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-duck-400 text-on-duck disabled:opacity-40"
         >
           {loading ? (
             <Spinner size={18} />

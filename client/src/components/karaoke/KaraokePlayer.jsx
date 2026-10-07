@@ -5,7 +5,7 @@
 // - ทุกเครื่องรวมถึง host ปรับตัวเล่นให้ตรงกับเวลาของห้อง ถ้าคลาดเกิน 1 วินาทีจะกระโดดไปตำแหน่งที่ถูกต้อง
 //   host เน็ตกระตุกจึงไม่ลากทั้งห้องย้อนกลับ
 // - เพลงโดนหยุดจากทางอื่น (ปุ่มเล่น/หยุดบนคีย์บอร์ดหรือหูฟัง ส่วนขยาย สลับแท็บ พับจอ ฯลฯ) จะเล่นต่อเองจากตำแหน่งที่ห้องเล่นถึง
-import { MicVocal, Play, Radio, SkipForward, Volume2 } from 'lucide-react';
+import { Play, Radio, SkipForward, Volume2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { nextSong } from '../../api/rooms';
 import { errorMessage } from '../../lib/api';
@@ -14,6 +14,7 @@ import { roomSession } from '../../lib/roomSession';
 import { PLAYER_STATE, UNPLAYABLE_ERRORS, loadYouTubeApi } from '../../lib/youtube';
 import { useRoomStore } from '../../stores/roomStore';
 import { toast } from '../../stores/uiStore';
+import DuckAvatar from '../DuckAvatar';
 
 const HEARTBEAT_MS = 4000;
 const DRIFT_CHECK_MS = 3000;
@@ -299,7 +300,7 @@ const KaraokePlayer = ({ roomId, isHost }) => {
 
   return (
     <div className="space-y-3">
-      <div className="relative aspect-video overflow-hidden rounded-(--radius-card) bg-[#1c1814] shadow-(--shadow-soft)">
+      <div className="relative aspect-video overflow-hidden rounded-(--radius-card) bg-stage shadow-(--shadow-soft)">
         {/* ไม่มีใครคลิกหรือกดคีย์ที่วิดีโอได้ รวมถึง host (กันหยุด/เลื่อนเพลง) ปุ่มแตะเพื่อฟังอยู่คนละชั้นจึงยังกดได้ */}
         <div
           ref={wrapperRef}
@@ -307,8 +308,11 @@ const KaraokePlayer = ({ roomId, isHost }) => {
           className="pointer-events-none absolute inset-0 [&>iframe]:h-full [&>iframe]:w-full"
         />
         {!current && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-beak-400 to-duck-400 text-center text-[#3B2F1E]">
-            <MicVocal size={56} className="animate-float" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-beak-400 to-duck-400 text-center text-on-duck">
+            {/* น้องเป็ดใส่หูฟังรอเพลง (บทที่ 2: เป็ดเปลี่ยนท่าตามหน้า) */}
+            <span aria-hidden="true" className="block animate-float">
+              <DuckAvatar avatar="duck-headphones" size={72} />
+            </span>
             <p className="font-display text-xl">ยังไม่มีเพลงในคิว</p>
             <p className="text-sm opacity-80">ค้นหาเพลงแล้วกดเพิ่มเข้าคิวได้เลย</p>
           </div>
@@ -324,7 +328,7 @@ const KaraokePlayer = ({ roomId, isHost }) => {
             onClick={tapToListen}
             className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 text-white"
           >
-            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-duck-400 text-[#3B2F1E]">
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-duck-400 text-on-duck">
               <Play size={36} fill="currentColor" />
             </span>
             <span className="font-display text-lg">แตะเพื่อเริ่มฟังเพลงพร้อมเพื่อน ๆ</span>
@@ -350,7 +354,7 @@ const KaraokePlayer = ({ roomId, isHost }) => {
             max={100}
             value={volume}
             onChange={(e) => setVolume(Number(e.target.value))}
-            className="w-28 accent-[#f5b316]"
+            className="w-28 accent-duck-500"
           />
         </label>
         {isHost && current && (

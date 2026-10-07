@@ -2,12 +2,14 @@
 import { ROOM_TYPES, TOPICS, YEARS, YEAR_HINTS } from '../config/constants';
 import { Chip } from './ui';
 
+// จอแคบชิปล้นแถวได้ (เลื่อนซ้าย-ขวา): ขอบซ้าย/ขวาจางลงเป็นสัญญาณว่ายังมีชิปต่อ
+// ขอบจางกว้างเท่า px-4 พอดี เลื่อนไปสุดแล้วชิปตัวแรก/ตัวสุดท้ายจึงไม่จาง และจอกว้างที่ไม่ล้นจะไม่เห็นความต่าง
 const ChipRow = ({ label, children }) => {
   return (
     <div
       role="group"
       aria-label={label}
-      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]"
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [mask-image:linear-gradient(to_right,transparent,black_1rem,black_calc(100%-1rem),transparent)]"
     >
       {children}
     </div>

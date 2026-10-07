@@ -6,6 +6,8 @@ const initial = {
   roomId: null,
   status: 'idle', // idle | joining | joined | closed | replaced | left | error
   error: null,
+  // socket ยังต่ออยู่ไหม (false = เน็ตหลุดระหว่างอยู่ในห้อง กำลังต่อใหม่ · ConnectionBanner)
+  connected: true,
   room: null,
   hostId: null,
   members: [],

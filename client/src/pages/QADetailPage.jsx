@@ -1,5 +1,5 @@
 // รายละเอียดกระทู้: คำถาม + คำตอบทั้งหมด + ช่องพิมพ์ตอบ
-import { ArrowLeft, CloudOff, EyeOff, Pencil, SearchX, Send, Trash } from 'lucide-react';
+import { ArrowLeft, EyeOff, Pencil, SearchX, Send, Trash } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import DuckAvatar from '../components/DuckAvatar';
@@ -7,7 +7,16 @@ import AnswerItem from '../components/qa/AnswerItem';
 import LoveButton from '../components/qa/LoveButton';
 import QuestionForm from '../components/qa/QuestionForm';
 import { ReportButton } from '../components/ReportModal';
-import { Badge, Button, EmptyState, IconButton, Spinner, Toggle } from '../components/ui';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  LoadError,
+  Skeleton,
+  SkeletonGroup,
+  Toggle,
+} from '../components/ui';
 import { LIMITS, TOPICS } from '../config/constants';
 import { createAnswer, readQuestion, removeQuestion, updateQuestion } from '../api/questions';
 import { useApiQuery } from '../hooks/useApiQuery';
@@ -64,35 +73,60 @@ const AnswerComposer = ({ questionId, onCreated }) => {
   );
 };
 
+// โครงกระทู้ระหว่างโหลด (ขนาดใกล้ของจริง หน้าจะไม่กระโดดตอนข้อมูลมา)
+const QuestionSkeleton = () => {
+  return (
+    <SkeletonGroup className="mx-auto max-w-2xl space-y-5">
+      <Skeleton className="h-4 w-28" />
+      <div className="card space-y-4 p-6">
+        <div className="flex gap-1.5">
+          <Skeleton className="h-6 w-20" />
+          <Skeleton className="h-6 w-14" />
+        </div>
+        <Skeleton className="h-7 w-4/5" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+        <div className="flex items-center justify-between border-t border-line pt-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+          <Skeleton className="h-11 w-24" />
+        </div>
+      </div>
+    </SkeletonGroup>
+  );
+};
+
 const QADetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isModerator = useAuthStore((s) => s.user?.role === 'moderator');
-  const { data, error, setData } = useApiQuery(readQuestion, id);
+  const { data, error, setData, retry } = useApiQuery(readQuestion, id);
   const question = data?.question ?? null;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  if (error) {
+  if (error && errorCode(error) === 'QUESTION_NOT_FOUND') {
     return (
       <EmptyState
-        icon={errorCode(error) === 'QUESTION_NOT_FOUND' ? SearchX : CloudOff}
+        icon={SearchX}
         title={errorMessage(error)}
         action={
-          <Link to="/qa" className="font-semibold text-calm-600 hover:underline dark:text-calm-300">
+          <Link to="/qa" className="link">
             กลับไปที่บอร์ด
           </Link>
         }
       />
     );
   }
-  if (!question) {
-    return (
-      <div className="flex justify-center py-16 text-muted">
-        <Spinner />
-      </div>
-    );
+  if (error) {
+    return <LoadError title="โหลดกระทู้ไม่สำเร็จ" message={errorMessage(error)} onRetry={retry} />;
   }
+  if (!question) return <QuestionSkeleton />;
 
   const topic = TOPICS[question.topic] ?? TOPICS.other;
   const patchQuestion = (patch) => setData((d) => ({ question: { ...d.question, ...patch } }));

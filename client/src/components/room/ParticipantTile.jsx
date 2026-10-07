@@ -35,7 +35,7 @@ const ParticipantTile = ({
         />
         {member.isMuted && (
           <span
-            className="absolute -right-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full bg-danger text-white ring-4 ring-bg"
+            className="absolute -right-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full bg-danger-strong text-white ring-4 ring-bg"
             title="ปิดไมค์"
           >
             <MicOff size={16} />
@@ -43,7 +43,7 @@ const ParticipantTile = ({
         )}
         {isHost && (
           <span
-            className="absolute -top-2 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-duck-400 text-[#3B2F1E] ring-4 ring-bg"
+            className="absolute -top-2 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-duck-400 text-on-duck ring-4 ring-bg"
             title="เจ้าของห้อง"
           >
             <Crown size={14} />
@@ -65,11 +65,12 @@ const ParticipantTile = ({
         </p>
       </div>
       {!isMe && <VolumeControl member={member} />}
+      {/* จอที่ใช้เมาส์ซ่อนปุ่มรายงานจนกว่าจะชี้ จอสัมผัส (รวมแท็บเล็ต) แสดงจาง ๆ ไว้ตลอดเพราะไม่มี hover */}
       {!isMe && (
         <ReportButton
           target={{ type: 'user', id: member.userId, label: member.nickname }}
           size={32}
-          className="absolute top-1 right-1 opacity-60 group-hover:opacity-100 sm:opacity-0 sm:focus-visible:opacity-100"
+          className="absolute top-1 right-1 opacity-60 group-hover:opacity-100 focus-visible:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
         />
       )}
     </div>

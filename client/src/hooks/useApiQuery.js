@@ -32,7 +32,14 @@ export const useApiQuery = (fetcher, arg) => {
       setState((s) => ({ ...s, data: typeof updater === 'function' ? updater(s.data) : updater })),
     [],
   );
+  // reload: โหลดใหม่เงียบ ๆ ข้อมูลเดิมยังแสดงอยู่ระหว่างรอ (เช่น หน้าผู้ดูแลหลังตรวจรายงาน)
   const reload = useCallback(() => setReloadToken((t) => t + 1), []);
+  // retry: ลองใหม่หลังโหลดไม่สำเร็จ กลับไปสถานะกำลังโหลด (loading = true) ผู้ใช้จะเห็นว่ากดติดแล้ว
+  // ไม่ค้างหน้าข้อผิดพลาดเดิมระหว่างรอ
+  const retry = useCallback(() => {
+    setState((s) => ({ ...s, argKey: null }));
+    setReloadToken((t) => t + 1);
+  }, []);
 
   return {
     data: current ? state.data : undefined,
@@ -40,5 +47,6 @@ export const useApiQuery = (fetcher, arg) => {
     loading: Boolean(fetcher) && !current,
     setData,
     reload,
+    retry,
   };
 };

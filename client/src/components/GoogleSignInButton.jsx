@@ -72,7 +72,9 @@ const GoogleSignInButton = ({ onCredential }) => {
 
   return (
     <div>
-      <div ref={containerRef} className="flex min-h-11 w-full justify-center" />
+      {/* color-scheme: light ให้ตรงกับ iframe ของ Google: โหมดมืดหน้าเว็บเป็น color-scheme dark
+          ถ้าไม่ตรงกัน เบราว์เซอร์จะวาดพื้นขาวทึบเป็นกรอบสี่เหลี่ยมรอบปุ่ม */}
+      <div ref={containerRef} className="flex min-h-11 w-full justify-center scheme-light" />
       {status === 'loading' && (
         <p className="flex items-center justify-center gap-2 text-sm text-muted">
           <Spinner size={16} /> กำลังโหลดปุ่ม Google…

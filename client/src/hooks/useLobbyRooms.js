@@ -8,7 +8,7 @@ import { useApiQuery } from './useApiQuery';
 const newestFirst = (a, b) => new Date(b.createdAt) - new Date(a.createdAt);
 
 export const useLobbyRooms = ({ year = null, type = null } = {}) => {
-  const { data, error, loading, setData } = useApiQuery(listRooms, {
+  const { data, error, loading, setData, retry } = useApiQuery(listRooms, {
     year: year ?? undefined,
     type: type ?? undefined,
   });
@@ -38,5 +38,5 @@ export const useLobbyRooms = ({ year = null, type = null } = {}) => {
     };
   }, [year, type, setData]);
 
-  return { rooms: data?.rooms ?? [], loading, error: error ? errorMessage(error) : null };
+  return { rooms: data?.rooms ?? [], loading, error: error ? errorMessage(error) : null, retry };
 };

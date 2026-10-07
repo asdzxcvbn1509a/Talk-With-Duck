@@ -15,7 +15,7 @@ const CrisisSupport = ({ compact = false }) => {
       </p>
       <ul className="mt-3 space-y-1.5 font-semibold">
         <li className="flex items-start gap-2">
-          <Phone size={18} className="mt-0.5 shrink-0 text-calm-600 dark:text-calm-300" />
+          <Phone size={18} className="mt-0.5 shrink-0 text-calm-700 dark:text-calm-300" />
           <span>
             สายด่วนสุขภาพจิต กรมสุขภาพจิต{' '}
             <a href="tel:1323" className="text-calm-700 underline dark:text-calm-200">
@@ -25,7 +25,7 @@ const CrisisSupport = ({ compact = false }) => {
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <Ambulance size={18} className="mt-0.5 shrink-0 text-calm-600 dark:text-calm-300" />
+          <Ambulance size={18} className="mt-0.5 shrink-0 text-calm-700 dark:text-calm-300" />
           <span>
             เหตุฉุกเฉินทางการแพทย์{' '}
             <a href="tel:1669" className="text-calm-700 underline dark:text-calm-200">

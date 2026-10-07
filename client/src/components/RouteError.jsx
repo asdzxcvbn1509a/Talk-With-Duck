@@ -25,7 +25,7 @@ const RouteError = () => {
             <Link
               to="/lobby"
               reloadDocument
-              className="inline-flex h-11 items-center rounded-full px-5 font-semibold text-calm-600 hover:underline dark:text-calm-300"
+              className="link inline-flex h-11 items-center rounded-full px-5"
             >
               กลับหน้าหลัก
             </Link>

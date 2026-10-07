@@ -183,6 +183,34 @@ describe.skipIf(!hasTestDb)('คิวเพลง Duck Karaoke Lounge (ตา�
     expect(next.body.queue[0]).toMatchObject({ status: 'playing', title: 'เพลงที่ 2' });
   });
 
+  it('รายการห้องบอกเพลงที่กำลังเล่น (การ์ดในหน้า lobby: กำลังเล่น / คิวว่าง)', async () => {
+    const host = await createUser();
+    const { body } = await api()
+      .post('/api/rooms')
+      .set(bearer(host.token))
+      .send({ name: 'ร้องเพลงยามเย็น', type: 'karaoke' });
+    const roomId = body.room.id;
+    const nowPlaying = async () => {
+      const list = await api().get('/api/rooms?type=karaoke').set(bearer(host.token));
+      return list.body.rooms.find((r) => r.id === roomId).nowPlaying;
+    };
+
+    expect(await nowPlaying()).toBeNull();
+
+    const added = await api()
+      .post(`/api/rooms/${roomId}/queue`)
+      .set(bearer(host.token))
+      .send(song(1));
+    expect(await nowPlaying()).toBe('เพลงที่ 1');
+
+    // ลบเพลงที่กำลังเล่นตอนคิวไม่มีเพลงอื่น → กลับเป็นคิวว่าง
+    await api()
+      .delete(`/api/rooms/${roomId}/queue/${added.body.queue[0].id}`)
+      .set(bearer(host.token))
+      .expect(200);
+    expect(await nowPlaying()).toBeNull();
+  });
+
   it('เพิ่มเพลงในห้องที่ไม่ใช่คาราโอเกะไม่ได้', async () => {
     const u = await createUser();
     const { body } = await api()

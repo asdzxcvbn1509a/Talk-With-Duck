@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useApiQuery } from './useApiQuery';
 
@@ -34,5 +34,22 @@ describe('useApiQuery', () => {
     const { result } = renderHook(() => useApiQuery(failing, 'x'));
     await waitFor(() => expect(result.current.error).toBe(failure));
     expect(result.current.data).toBeUndefined();
+  });
+
+  it('retry หลังโหลดไม่สำเร็จ: กลับไปสถานะกำลังโหลดทันที (ไม่ค้างหน้า error) แล้วได้ข้อมูล', async () => {
+    const fetcher = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ data: { ok: true } });
+    const { result } = renderHook(() => useApiQuery(fetcher, 'x'));
+    await waitFor(() => expect(result.current.error).toBeInstanceOf(Error));
+
+    act(() => result.current.retry());
+    expect(result.current.loading).toBe(true);
+    expect(result.current.error).toBeNull();
+
+    await waitFor(() => expect(result.current.data).toEqual({ ok: true }));
+    expect(result.current.loading).toBe(false);
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });

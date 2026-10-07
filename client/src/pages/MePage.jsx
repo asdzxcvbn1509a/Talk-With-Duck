@@ -1,18 +1,26 @@
-import { Flag, Lock, LogOut, Shield } from 'lucide-react';
+import { Flag, Lock, LogOut, Monitor, Moon, Shield, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import DuckAvatar from '../components/DuckAvatar';
 import { AvatarPicker, YearPicker } from '../components/ProfilePickers';
-import { Button, Field } from '../components/ui';
+import { Button, Field, Segmented } from '../components/ui';
 import { LIMITS } from '../config/constants';
 import { errorMessage } from '../lib/api';
 import { logout, updateProfile } from '../lib/auth';
 import { roomSession } from '../lib/roomSession';
 import { useAuthStore } from '../stores/authStore';
-import { toast } from '../stores/uiStore';
+import { toast, useUiStore } from '../stores/uiStore';
+
+const THEME_OPTIONS = [
+  { value: 'system', label: 'ตามเครื่อง', icon: Monitor },
+  { value: 'light', label: 'สว่าง', icon: Sun },
+  { value: 'dark', label: 'มืด', icon: Moon },
+];
 
 const MePage = () => {
   const user = useAuthStore((s) => s.user);
+  const theme = useUiStore((s) => s.theme);
+  const setTheme = useUiStore((s) => s.setTheme);
   const navigate = useNavigate();
   const [form, setForm] = useState({
     nickname: user.nickname,
@@ -86,6 +94,14 @@ const MePage = () => {
           บันทึก
         </Button>
       </form>
+
+      <section className="card space-y-3 p-6">
+        <div>
+          <h2 className="text-lg font-medium">การแสดงผล</h2>
+          <p className="text-sm text-muted">โหมดมืดช่วยให้สบายตาตอนกลางคืน มีผลเฉพาะเครื่องนี้</p>
+        </div>
+        <Segmented label="โหมดสี" options={THEME_OPTIONS} value={theme} onChange={setTheme} />
+      </section>
 
       <nav className="card divide-y divide-line overflow-hidden">
         <Link to="/guidelines" className="flex items-center gap-3 px-6 py-4 hover:bg-surface-2">

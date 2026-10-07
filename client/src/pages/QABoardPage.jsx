@@ -1,19 +1,20 @@
 // Open Q&A Board: กระดานทิ้งคำถาม ตอบได้ไม่จำกัดจำนวนคน (ข้อ 3.5.7)
-import { CloudOff, MessageCircleQuestionMark, Pin, Plus } from 'lucide-react';
+import { Pin, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { buttonClass } from '../components/buttonClass';
 import { TopicFilter, YearFilter } from '../components/Filters';
-import QuestionCard from '../components/qa/QuestionCard';
-import { Button, EmptyState, Spinner } from '../components/ui';
+import QuestionCard, { QuestionCardSkeleton } from '../components/qa/QuestionCard';
+import { Button, EmptyState, LoadError, Segmented, SkeletonGroup } from '../components/ui';
 import { listQuestions } from '../api/questions';
 import { useApiQuery } from '../hooks/useApiQuery';
 import { errorMessage } from '../lib/api';
 import { toast, useUiStore } from '../stores/uiStore';
 
 const SORTS = [
-  ['latest', 'ล่าสุด'],
-  ['popular', 'ได้ใจมากสุด'],
-  ['unanswered', 'รอคำตอบ'],
+  { value: 'latest', label: 'ล่าสุด' },
+  { value: 'popular', label: 'ได้ใจมากสุด' },
+  { value: 'unanswered', label: 'รอคำตอบ' },
 ];
 
 const QABoardPage = () => {
@@ -24,7 +25,7 @@ const QABoardPage = () => {
     topic: filter.topic ?? undefined,
     sort: filter.sort,
   };
-  const { data, error: loadError, loading, setData } = useApiQuery(listQuestions, params);
+  const { data, error: loadError, loading, setData, retry } = useApiQuery(listQuestions, params);
   const items = data?.items ?? [];
   const nextCursor = data?.nextCursor ?? null;
   const error = loadError ? errorMessage(loadError) : null;
@@ -49,7 +50,8 @@ const QABoardPage = () => {
     }));
 
   return (
-    <div className="space-y-5">
+    // มือถือ: เว้นที่ท้ายหน้าให้ปุ่ม "ตั้งคำถาม" แบบลอย ไม่บังปุ่มโหลดเพิ่ม
+    <div className="space-y-5 pb-16 md:pb-0">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-medium sm:text-3xl">
@@ -57,58 +59,42 @@ const QABoardPage = () => {
           </h1>
           <p className="text-muted">ทิ้งคำถามไว้ แล้วกลับมาดูคำตอบจากเพื่อนและรุ่นพี่ได้ตลอดเวลา</p>
         </div>
-        <Link
-          to="/qa/new"
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-duck-400 px-5 font-semibold text-[#3B2F1E] shadow-(--shadow-soft) transition hover:bg-duck-300"
-        >
+        {/* max-md:hidden (ไม่ใช่ hidden md:inline-flex): buttonClass มี inline-flex อยู่แล้ว ต้องใช้ variant ถึงจะชนะ */}
+        <Link to="/qa/new" className={buttonClass({ className: 'max-md:hidden' })}>
           <Plus size={18} /> ตั้งคำถาม
         </Link>
       </header>
 
       <div className="space-y-2">
-        <div
-          className="flex gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold sm:w-fit"
-          role="tablist"
-          aria-label="เรียงลำดับ"
-        >
-          {SORTS.map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={filter.sort === key}
-              onClick={() => setFilter({ sort: key })}
-              className={`flex-1 rounded-full px-2 py-2 transition sm:flex-none sm:px-4 ${filter.sort === key ? 'bg-surface shadow' : 'text-muted'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="เรียงลำดับ"
+          options={SORTS}
+          value={filter.sort}
+          onChange={(sort) => setFilter({ sort })}
+          fit
+        />
         <YearFilter value={filter.year} onChange={(year) => setFilter({ year })} />
         <TopicFilter value={filter.topic} onChange={(topic) => setFilter({ topic })} />
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-16 text-muted">
-          <Spinner />
-        </div>
+        <SkeletonGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <QuestionCardSkeleton key={i} />
+          ))}
+        </SkeletonGroup>
       ) : error ? (
-        <EmptyState icon={CloudOff} title="โหลดบอร์ดไม่สำเร็จ">
-          {error}
-        </EmptyState>
+        <LoadError title="โหลดบอร์ดไม่สำเร็จ" message={error} onRetry={retry} />
       ) : items.length === 0 ? (
         <EmptyState
-          icon={MessageCircleQuestionMark}
+          mascot="duck-glasses"
           title={
             filter.sort === 'unanswered'
               ? 'ทุกคำถามมีคนตอบแล้ว เยี่ยมมาก!'
               : 'ยังไม่มีคำถามในหมวดนี้'
           }
           action={
-            <Link
-              to="/qa/new"
-              className="font-semibold text-calm-600 hover:underline dark:text-calm-300"
-            >
+            <Link to="/qa/new" className="link">
               เป็นคนแรกที่ตั้งคำถาม
             </Link>
           }
@@ -129,6 +115,17 @@ const QABoardPage = () => {
           )}
         </>
       )}
+
+      {/* มือถือ: ปุ่มตั้งคำถามลอยอยู่เหนือเมนูล่าง เลื่อนลงไปไกลแค่ไหนก็กดได้ (จอกว้างใช้ปุ่มบนหัวหน้า) */}
+      <Link
+        to="/qa/new"
+        className={buttonClass({
+          size: 'lg',
+          className: 'fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 md:hidden',
+        })}
+      >
+        <Plus size={22} /> ตั้งคำถาม
+      </Link>
     </div>
   );
 };

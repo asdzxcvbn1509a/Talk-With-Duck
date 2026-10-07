@@ -44,7 +44,7 @@ Socket.IO บน Express ทำหน้าที่เป็น Signaling Serve
 
 | Event | Payload | ส่งถึง |
 |---|---|---|
-| `lobby:room-upserted` | ข้อมูลห้อง | คนที่เปิด lobby |
+| `lobby:room-upserted` | ข้อมูลห้อง (รวม `nowPlaying`) · ส่งเมื่อสมาชิกเข้า/ออก หรือคิวเพลงเปลี่ยน | คนที่เปิด lobby |
 | `lobby:room-removed` | `{ id }` | คนที่เปิด lobby |
 | `room:peer-joined` / `room:peer-left` | `{ socketId, userId }` | คนในห้อง (ใช้จัดการ RTCPeerConnection) |
 | `room:member-joined` | ข้อมูลสมาชิก | คนในห้อง |

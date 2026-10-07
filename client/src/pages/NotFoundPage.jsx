@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { buttonClass } from '../components/buttonClass';
 
 const NotFoundPage = () => {
   return (
@@ -6,7 +7,7 @@ const NotFoundPage = () => {
       <img src="/duck.svg" alt="" className="h-24 w-24 animate-float" />
       <h1 className="text-3xl font-medium">เป็ดหลงทาง</h1>
       <p className="text-muted">ไม่พบหน้าที่คุณตามหา</p>
-      <Link to="/lobby" className="rounded-full bg-duck-400 px-6 py-3 font-semibold text-[#3B2F1E]">
+      <Link to="/lobby" className={buttonClass({ size: 'lg' })}>
         กลับหน้าหลัก
       </Link>
     </div>

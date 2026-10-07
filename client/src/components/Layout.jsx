@@ -1,4 +1,13 @@
-import { House, MessageCircleQuestionMark, Music, Shield, User } from 'lucide-react';
+import {
+  CircleAlert,
+  CircleCheck,
+  House,
+  Info,
+  MessageCircleQuestionMark,
+  Music,
+  Shield,
+  User,
+} from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation, useNavigation } from 'react-router';
 import { useAuthStore, selectIsModerator } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
@@ -14,29 +23,35 @@ const NAV = [
 // ห้องที่กำลังคุยอยู่: ซ่อนเมนูด้านล่างเพื่อให้โฟกัสกับบทสนทนา (Progressive Disclosure)
 const FOCUS_ROUTES = [/^\/room\//, /^\/karaoke\/[^/]+$/];
 
+// ไอคอนบอกประเภทของ toast ด้วย ไม่ให้ผู้ใช้ต้องแยกจากสีอย่างเดียว
+const TOAST_TONES = {
+  info: { className: 'bg-ink text-bg', icon: Info },
+  success: { className: 'bg-calm-700 text-white', icon: CircleCheck },
+  error: { className: 'bg-danger-strong text-white', icon: CircleAlert },
+};
+
 export const Toaster = () => {
   const toasts = useUiStore((s) => s.toasts);
   const dismiss = useUiStore((s) => s.dismissToast);
-  const tones = {
-    info: 'bg-ink text-bg',
-    success: 'bg-calm-600 text-white',
-    error: 'bg-danger text-white',
-  };
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-3 z-[60] flex flex-col items-center gap-2 px-4"
+      className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-60 flex flex-col items-center gap-2 px-4"
       aria-live="polite"
     >
-      {toasts.map((t) => (
-        <button
-          type="button"
-          key={t.id}
-          onClick={() => dismiss(t.id)}
-          className={`pointer-events-auto max-w-md animate-pop rounded-2xl px-4 py-3 text-left text-sm font-medium shadow-lg ${tones[t.tone] ?? tones.info}`}
-        >
-          {t.message}
-        </button>
-      ))}
+      {toasts.map((t) => {
+        const tone = TOAST_TONES[t.tone] ?? TOAST_TONES.info;
+        return (
+          <button
+            type="button"
+            key={t.id}
+            onClick={() => dismiss(t.id)}
+            className={`pointer-events-auto flex max-w-md animate-pop items-start gap-2 rounded-2xl px-4 py-3 text-left text-sm font-medium shadow-lg ${tone.className}`}
+          >
+            <tone.icon size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>{t.message}</span>
+          </button>
+        );
+      })}
     </div>
   );
 };
@@ -97,7 +112,7 @@ const Layout = () => {
                 className={({ isActive }) =>
                   `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
                     isActive
-                      ? 'bg-duck-100 text-duck-700 dark:bg-surface-2 dark:text-duck-300'
+                      ? 'bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300'
                       : 'text-muted hover:text-ink'
                   }`
                 }
@@ -110,7 +125,13 @@ const Layout = () => {
               <NavLink
                 to="/admin/reports"
                 title="ผู้ดูแล"
-                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted hover:text-ink"
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    isActive
+                      ? 'bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300'
+                      : 'text-muted hover:text-ink'
+                  }`
+                }
               >
                 <Shield size={18} />
                 {/* จอแท็บเล็ตเหลือแค่ไอคอน เมนูจะได้พอในแถวเดียว */}
@@ -134,7 +155,14 @@ const Layout = () => {
         </div>
       </header>
 
-      <main className={`mx-auto max-w-6xl px-4 pt-5 ${focus ? 'pb-32' : 'pb-28 md:pb-12'}`}>
+      {/* เว้นที่ด้านล่างให้แถบควบคุมในห้อง/เมนูล่าง รวมแถบ Home ของ iPhone ด้วย เนื้อหาท้ายหน้าจะได้ไม่โดนบัง */}
+      <main
+        className={`mx-auto max-w-6xl px-4 pt-5 ${
+          focus
+            ? 'pb-[calc(9.5rem+env(safe-area-inset-bottom))]'
+            : 'pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-12'
+        }`}
+      >
         <Outlet />
       </main>
 
@@ -149,11 +177,24 @@ const Layout = () => {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold ${isActive ? 'text-duck-600 dark:text-duck-300' : 'text-muted'}`
+                  `flex flex-col items-center gap-0.5 pt-2 pb-1.5 text-xs ${isActive ? 'font-bold text-ink' : 'font-semibold text-muted'}`
                 }
               >
-                <item.icon size={22} />
-                {item.label}
+                {({ isActive }) => (
+                  <>
+                    {/* เมนูที่เลือกอยู่มีแคปซูลสีเหลืองรองหลังไอคอน (ชื่อเมนูใช้สีตัวอักษรปกติ อ่านง่ายกว่าตัวอักษรสีเหลือง) */}
+                    <span
+                      className={`flex h-7 w-14 items-center justify-center rounded-full transition ${
+                        isActive
+                          ? 'bg-duck-200 text-on-duck dark:bg-duck-700/40 dark:text-duck-200'
+                          : ''
+                      }`}
+                    >
+                      <item.icon size={22} />
+                    </span>
+                    {item.label}
+                  </>
+                )}
               </NavLink>
             ))}
           </div>

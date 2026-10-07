@@ -5,7 +5,6 @@ import {
   DoorClosed,
   EyeOff,
   ShieldCheck,
-  Sun,
   TriangleAlert,
   UserCheck,
   UserX,
@@ -13,7 +12,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import DuckAvatar from '../components/DuckAvatar';
-import { Badge, Button, EmptyState, Spinner } from '../components/ui';
+import { Badge, Button, EmptyState, Segmented, Spinner } from '../components/ui';
 import { REPORT_REASONS, ROOM_TYPES } from '../config/constants';
 import { listBannedUsers, listReports, readStats, reviewReport, unbanUser } from '../api/admin';
 import { useApiQuery } from '../hooks/useApiQuery';
@@ -31,9 +30,9 @@ const TARGET_LABELS = {
   room: 'ห้อง',
 };
 const STATUS_TABS = [
-  ['pending', 'รอตรวจสอบ'],
-  ['actioned', 'จัดการแล้ว'],
-  ['dismissed', 'ยกเลิกแล้ว'],
+  { value: 'pending', label: 'รอตรวจสอบ' },
+  { value: 'actioned', label: 'จัดการแล้ว' },
+  { value: 'dismissed', label: 'ยกเลิกแล้ว' },
 ];
 
 const StatTile = ({ label, value, sub }) => {
@@ -151,10 +150,7 @@ const TargetPreview = ({ report }) => {
       {targetType === 'answer' && (
         <>
           <p className="line-clamp-4">{target.content}</p>
-          <Link
-            to={`/qa/${target.questionId}`}
-            className="mt-1 inline-block text-xs text-calm-600 hover:underline dark:text-calm-300"
-          >
+          <Link to={`/qa/${target.questionId}`} className="link mt-1 inline-block text-xs">
             ดูกระทู้
           </Link>
         </>
@@ -316,7 +312,7 @@ const AdminReportsPage = () => {
     <div className="space-y-6">
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-medium sm:text-3xl">
-          <ShieldCheck size={28} className="shrink-0 text-calm-600 dark:text-calm-300" />
+          <ShieldCheck size={28} className="shrink-0 text-calm-700 dark:text-calm-300" />
           ดูแลคอมมูนิตี้
         </h1>
         <p className="text-muted">ตรวจสอบรายงาน และดูสถิติการใช้งานสำหรับสรุปผลโครงการ</p>
@@ -326,23 +322,13 @@ const AdminReportsPage = () => {
 
       <BannedUsers users={bans?.users} onChanged={refresh} />
 
-      <div
-        className="flex gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold sm:w-fit"
-        role="tablist"
-      >
-        {STATUS_TABS.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={status === key}
-            onClick={() => setStatus(key)}
-            className={`flex-1 rounded-full px-2 py-2 transition sm:flex-none sm:px-4 ${status === key ? 'bg-surface shadow' : 'text-muted'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        label="สถานะรายงาน"
+        options={STATUS_TABS}
+        value={status}
+        onChange={setStatus}
+        fit
+      />
 
       {reports === null ? (
         <div className="flex justify-center py-12 text-muted">
@@ -350,7 +336,7 @@ const AdminReportsPage = () => {
         </div>
       ) : reports.length === 0 ? (
         <EmptyState
-          icon={Sun}
+          mascot="duck-flower"
           title={status === 'pending' ? 'ไม่มีรายงานที่รอตรวจสอบ' : 'ยังไม่มีรายการ'}
         >
           บ่อเป็ดสงบสุขดี

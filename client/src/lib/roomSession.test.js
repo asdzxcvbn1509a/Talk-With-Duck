@@ -90,6 +90,20 @@ describe('roomSession', () => {
     expect(rtc.readIceServers).toHaveBeenCalledTimes(1);
   });
 
+  it('เน็ตหลุดระหว่างอยู่ในห้อง → connected เป็น false (ขึ้นแถบแจ้ง) ต่อกลับได้ → true และเข้าห้องใหม่', async () => {
+    await session.join('r1', { withMic: false });
+    const { useRoomStore } = await import('../stores/roomStore');
+    const handler = (event) => socket.on.mock.calls.find(([name]) => name === event)[1];
+    expect(useRoomStore.getState().connected).toBe(true);
+
+    handler('disconnect')();
+    expect(useRoomStore.getState().connected).toBe(false);
+
+    await handler('connect')();
+    expect(useRoomStore.getState().connected).toBe(true);
+    expect(socket.emitWithAck).toHaveBeenCalledTimes(2);
+  });
+
   it('โหลด ICE servers ล่วงหน้าไม่สำเร็จ → ตอนกดเข้าห้องขอใหม่', async () => {
     rtc.readIceServers.mockRejectedValueOnce(new Error('offline'));
     await session.prepare();

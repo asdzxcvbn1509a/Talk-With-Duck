@@ -41,19 +41,20 @@ const Message = ({ message, mine }) => {
           // ฟองแชทกว้างตามข้อความ: ใช้ wrap-anywhere ลิงก์ยาวจึงขึ้นบรรทัดใหม่ในฟองแทนการล้นออกไป
           <p
             className={`rounded-3xl px-4 py-2 wrap-anywhere whitespace-pre-wrap ${
-              mine ? 'rounded-br-md bg-duck-300 text-[#3B2F1E]' : 'rounded-bl-md bg-surface-2'
+              mine ? 'rounded-br-md bg-duck-300 text-on-duck' : 'rounded-bl-md bg-surface-2'
             }`}
           >
             {message.content}
           </p>
         )}
-        <span className="mt-0.5 px-1 text-[10px] text-muted">{time}</span>
+        <span className="mt-0.5 px-1 text-[11px] text-muted">{time}</span>
       </div>
       {!mine && (
+        // จอสัมผัสไม่มี hover: แสดงปุ่มรายงานจาง ๆ ไว้ตลอด ไม่งั้นมือถือหาปุ่มรายงานข้อความไม่เจอเลย
         <ReportButton
           target={{ type: 'message', id: message.id, label: 'ข้อความนี้' }}
-          size={28}
-          className="self-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+          size={32}
+          className="self-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-60"
         />
       )}
     </li>
@@ -105,7 +106,7 @@ const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อ�
       </header>
       <ul
         ref={listRef}
-        className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4"
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4"
         aria-live="polite"
       >
         {messages.length === 0 && (
@@ -134,7 +135,7 @@ const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อ�
               <span className={`grid h-11 w-11 place-items-center rounded-2xl ${s.tone}`}>
                 <s.icon size={22} strokeWidth={2.25} />
               </span>
-              <span className="text-[11px] text-muted">{s.label}</span>
+              <span className="text-xs text-muted">{s.label}</span>
             </button>
           ))}
         </div>
@@ -144,7 +145,9 @@ const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อ�
           icon={Sparkles}
           label="สติกเกอร์"
           onClick={() => setShowStickers((v) => !v)}
-          className={showStickers ? 'bg-duck-100 text-duck-700 dark:bg-surface-2' : ''}
+          className={
+            showStickers ? 'bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300' : ''
+          }
         />
         <input
           className="input h-11 flex-1 py-2"
@@ -158,7 +161,7 @@ const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อ�
           type="submit"
           disabled={!text.trim() || sending}
           aria-label="ส่ง"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-duck-400 text-[#3B2F1E] transition disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-duck-400 text-on-duck transition disabled:opacity-40"
         >
           <Send size={18} />
         </button>

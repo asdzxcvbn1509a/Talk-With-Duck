@@ -15,6 +15,7 @@ import {
 } from './components/guards';
 import { bootstrapSession } from './lib/auth';
 import { lazyPage } from './lib/lazyPage';
+import { watchSystemTheme } from './lib/theme';
 
 // path ใน import() ต้องเขียนตรง ๆ ไม่ใช้ตัวแปร Vite จึงแยกแต่ละหน้าเป็นไฟล์ของตัวเองได้
 const router = createBrowserRouter(
@@ -56,6 +57,9 @@ const App = () => {
   useEffect(() => {
     bootstrapSession();
   }, []);
+
+  // เลือก "ตามเครื่อง" ไว้: เปลี่ยนโหมดของระบบแล้วหน้าเว็บเปลี่ยนตาม (index.html ตั้งโหมดแรกให้แล้ว)
+  useEffect(() => watchSystemTheme(), []);
 
   return (
     <>

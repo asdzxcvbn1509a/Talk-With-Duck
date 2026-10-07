@@ -1,8 +1,9 @@
 // สถานะการแสดงผลบนหน้าจอ (ข้อ 3.5.3: uiStore): toast, สถานะปลุก server, ตัวกรองที่เลือกไว้,
-// ระดับเสียงของเพื่อนแต่ละคนที่ผู้ใช้ปรับเอง (จำไว้ในเบราว์เซอร์ข้ามการรีเฟรช)
+// ระดับเสียงของเพื่อนแต่ละคนที่ผู้ใช้ปรับเอง (จำไว้ในเบราว์เซอร์ข้ามการรีเฟรช), โหมดสว่าง/มืด
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { toPlaybackVolume } from '../lib/rtc/volume';
+import { readThemePreference, setThemePreference } from '../lib/theme';
 
 let toastId = 0;
 
@@ -22,6 +23,8 @@ export const useUiStore = create(
       // มีผลเฉพาะเครื่องนี้ เพื่อนในห้องไม่รู้ (components/room/VolumeControl.jsx)
       volumes: {}, // userId -> ระดับเสียง 0–1 (ไม่มี key = 100%)
       mutedUsers: {}, // userId -> true ถ้าปิดเสียงคนนั้นไว้
+      // system | light | dark · lib/theme.js จำค่าเองใน key แยก (index.html ต้องอ่านได้ก่อน React โหลด)
+      theme: readThemePreference(),
 
       toast: (message, tone = 'info') => {
         toastId += 1;
@@ -33,6 +36,10 @@ export const useUiStore = create(
       setWaking: (waking) => set({ waking }),
       setLobbyFilter: (patch) => set({ lobbyFilter: { ...get().lobbyFilter, ...patch } }),
       setQaFilter: (patch) => set({ qaFilter: { ...get().qaFilter, ...patch } }),
+      setTheme: (theme) => {
+        setThemePreference(theme);
+        set({ theme });
+      },
 
       setVolume: (userId, volume) => {
         const value = toPlaybackVolume(volume);

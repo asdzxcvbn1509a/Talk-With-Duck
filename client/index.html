@@ -7,6 +7,23 @@
     <meta name="theme-color" content="#FFC93C" />
     <link rel="icon" type="image/svg+xml" href="/duck.svg" />
     <title>Talk With Duck</title>
+    <script>
+      // ใส่โหมดสว่าง/มืดที่ผู้ใช้เลือกไว้ก่อนหน้าเว็บวาด จอจะได้ไม่กระพริบเป็นสีสว่างก่อน
+      // ทำแบบเดียวกับ applyTheme ใน src/lib/theme.js (แก้ที่หนึ่งต้องแก้อีกที่ด้วย)
+      (() => {
+        let preference = 'system';
+        try {
+          preference = localStorage.getItem('twd-theme') || 'system';
+        } catch {
+          // ปิด localStorage ไว้: ใช้ตามเครื่อง
+        }
+        const dark =
+          preference === 'dark' ||
+          (preference !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        if (dark) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1c1814');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

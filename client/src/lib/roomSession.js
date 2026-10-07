@@ -196,8 +196,11 @@ class RoomSession {
     on('queue:updated', ({ queue }) => s().patch({ queue }));
     on('karaoke:state', (karaoke) => s().patch({ karaoke }));
 
+    // เน็ตหลุด: บอกผู้ใช้ (ConnectionBanner) ระหว่างที่ socket.io พยายามต่อใหม่ให้เอง
+    on('disconnect', () => s().patch({ connected: false }));
     // เน็ตหลุดแล้วต่อกลับมาได้: socket id ใหม่ → ต่อเสียงใหม่ทั้งหมด
     on('connect', async () => {
+      s().patch({ connected: true });
       if (s().status !== 'joined') return;
       this.mesh?.closeAll();
       try {

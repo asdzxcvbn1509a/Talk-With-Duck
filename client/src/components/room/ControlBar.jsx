@@ -1,5 +1,33 @@
 // แถบควบคุมด้านล่าง: ปุ่มไมค์และปุ่มออกจากห้องขนาดใหญ่ มองเห็นชัด (Autonomy & Boundary Control)
+// ปุ่มไมค์มีคำบอกสถานะใต้ปุ่ม ไอคอนไมค์สีแดงอย่างเดียวอ่านได้ทั้ง "ปิดอยู่" และ "กดเพื่อปิด"
 import { LogOut, MessageCircle, Mic, MicOff } from 'lucide-react';
+
+// สถานะไมค์ → หน้าตาปุ่ม · ไม่ได้รับสิทธิ์ใช้ไมค์ใช้สีกลาง ๆ แยกจากการปิดไมค์เอง (สีแดง)
+// label บอกทั้งสถานะและผลของการกด (ไม่ใช้ aria-pressed คู่กับ label ที่เปลี่ยนไปมา โปรแกรมอ่านหน้าจอจะอ่านสับสน)
+const micView = ({ muted, micAvailable }) => {
+  if (!micAvailable) {
+    return {
+      icon: MicOff,
+      caption: 'ขอใช้ไมค์',
+      label: 'ยังไม่ได้รับสิทธิ์ใช้ไมค์ แตะเพื่อขอสิทธิ์',
+      className: 'border border-line bg-surface-2 text-muted',
+    };
+  }
+  if (muted) {
+    return {
+      icon: MicOff,
+      caption: 'ไมค์ปิดอยู่',
+      label: 'ไมค์ปิดอยู่ แตะเพื่อเปิดไมค์',
+      className: 'bg-danger-strong text-white',
+    };
+  }
+  return {
+    icon: Mic,
+    caption: 'ไมค์เปิด',
+    label: 'ไมค์เปิดอยู่ แตะเพื่อปิดไมค์',
+    className: 'bg-calm-600 text-white',
+  };
+};
 
 const ControlBar = ({
   muted,
@@ -11,36 +39,44 @@ const ControlBar = ({
   unread = 0,
   extra,
 }) => {
+  const mic = micView({ muted, micAvailable });
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <div className="mx-auto flex max-w-3xl items-center justify-center gap-3 px-4 py-3 sm:gap-5">
-        <button
-          type="button"
-          onClick={onToggleMute}
-          aria-pressed={!muted}
-          aria-label={!micAvailable ? 'เปิดไมโครโฟน' : muted ? 'เปิดไมค์' : 'ปิดไมค์'}
-          className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-full text-xs font-semibold shadow-lg transition active:scale-95 sm:h-[72px] sm:w-[72px] ${
-            muted ? 'bg-danger text-white' : 'bg-calm-500 text-white'
-          }`}
-        >
-          {muted ? <MicOff size={26} /> : <Mic size={26} />}
-        </button>
-
-        {onToggleChat && (
+      <div className="mx-auto flex max-w-3xl items-start justify-center gap-2.5 px-4 pt-3 pb-2 sm:gap-5">
+        <div className="flex flex-col items-center gap-1">
           <button
             type="button"
-            onClick={onToggleChat}
-            aria-pressed={chatOpen}
-            aria-label="แชท"
-            className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-line transition ${chatOpen ? 'bg-duck-100 text-duck-700 dark:bg-surface-2' : 'bg-surface text-ink'}`}
+            onClick={onToggleMute}
+            aria-label={mic.label}
+            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-lg transition active:scale-95 sm:h-18 sm:w-18 ${mic.className}`}
           >
-            <MessageCircle size={22} />
-            {unread > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-5 rounded-full bg-beak-500 px-1.5 text-xs font-bold text-white">
-                {unread > 9 ? '9+' : unread}
-              </span>
-            )}
+            <mic.icon size={26} />
           </button>
+          <span className="text-xs font-semibold whitespace-nowrap text-muted" aria-hidden="true">
+            {mic.caption}
+          </span>
+        </div>
+
+        {onToggleChat && (
+          <div className="flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={onToggleChat}
+              aria-pressed={chatOpen}
+              aria-label={unread > 0 ? `แชท (${unread} ข้อความใหม่)` : 'แชท'}
+              className={`relative mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-line transition sm:mt-2 ${chatOpen ? 'bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300' : 'bg-surface text-ink'}`}
+            >
+              <MessageCircle size={22} />
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 rounded-full bg-beak-500 px-1.5 text-xs font-bold text-on-duck">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </button>
+            <span className="text-xs font-semibold text-muted" aria-hidden="true">
+              แชท
+            </span>
+          </div>
         )}
 
         {extra}
@@ -48,7 +84,7 @@ const ControlBar = ({
         <button
           type="button"
           onClick={onLeave}
-          className="flex h-14 items-center gap-2 rounded-full bg-[#3B2F1E] px-4 font-semibold whitespace-nowrap text-white transition hover:bg-danger active:scale-95 sm:px-6 dark:bg-surface-2"
+          className="mt-1 flex h-14 items-center gap-2 rounded-full bg-ink px-4 font-semibold whitespace-nowrap text-bg transition hover:bg-danger-strong hover:text-white active:scale-95 sm:mt-2 sm:px-6"
         >
           <LogOut size={20} /> ออกจากห้อง
         </button>

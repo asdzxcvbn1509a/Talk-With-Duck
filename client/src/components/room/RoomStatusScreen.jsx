@@ -44,10 +44,7 @@ const RoomStatusScreen = ({ status, error, onRetry, backTo = '/lobby' }) => {
             {onRetry && ['replaced', 'error', 'left'].includes(status) && (
               <Button onClick={onRetry}>เข้าห้องอีกครั้ง</Button>
             )}
-            <Link
-              to={backTo}
-              className="inline-flex h-11 items-center rounded-full px-5 font-semibold text-calm-600 hover:underline dark:text-calm-300"
-            >
+            <Link to={backTo} className="link inline-flex h-11 items-center rounded-full px-5">
               กลับไปเลือกห้อง
             </Link>
           </div>

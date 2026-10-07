@@ -71,7 +71,7 @@ const ReportModal = ({ open, onClose, target }) => {
               value={key}
               checked={reason === key}
               onChange={() => setReason(key)}
-              className="accent-[#e5484d]"
+              className="accent-danger"
             />
             {label}
           </label>

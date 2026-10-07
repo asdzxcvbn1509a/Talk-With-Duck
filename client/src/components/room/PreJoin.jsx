@@ -40,10 +40,7 @@ const PreJoin = ({ preview, previewError, joining, joinError, onJoin, backTo = '
           icon={info.icon}
           title={info.title}
           action={
-            <Link
-              to={backTo}
-              className="font-semibold text-calm-600 hover:underline dark:text-calm-300"
-            >
+            <Link to={backTo} className="link">
               กลับไปเลือกห้อง
             </Link>
           }
@@ -69,7 +66,7 @@ const PreJoin = ({ preview, previewError, joining, joinError, onJoin, backTo = '
     <div className="mx-auto max-w-md pt-4">
       <div className="card space-y-6 p-6 text-center sm:p-8">
         <div>
-          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-duck-100 text-duck-700 dark:bg-surface-2 dark:text-duck-300">
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300">
             <type.icon size={30} />
           </span>
           <h1 className="mt-3 text-2xl font-medium">{preview.name}</h1>

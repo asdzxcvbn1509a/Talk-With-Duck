@@ -123,6 +123,17 @@ npm run dev
   if (!confirmed) return;
   ```
 - **ของที่กดได้ใช้ `<button>` หรือ `<Link>`** ไม่ใช้ `<div onClick>` เพื่อให้กดด้วยคีย์บอร์ดได้ ส่วนรูปมือ (cursor) ได้จาก `index.css` อัตโนมัติ ไม่ต้องใส่ `cursor-pointer` เอง
+- **สีใช้ token ใน `client/src/index.css` เท่านั้น** ห้ามใส่ hex ใน class ตรง ๆ เช่น `text-[#…]` (ESLint กันไว้)
+  - token ผ่านการตรวจ contrast (≥ 4.5:1) และเปลี่ยนตามโหมดมืดให้เอง
+  - ตัวอักษรบนพื้นเหลือง/ส้มใช้ `text-on-duck`
+  - ตัวอักษรสีเหลือง/ส้มบนพื้นสว่างใช้ `text-duck-800` / `text-beak-700`
+  - ข้อความ error ใช้ `text-danger` ส่วนพื้นสีแดงที่มีตัวอักษรขาวใช้ `bg-danger-strong`
+  - ลิงก์ข้อความใช้ class `link`
+- **ชิ้นส่วนที่มีให้ใช้ใน `components/ui.jsx`:**
+  - `Segmented` สำหรับเลือกทีละอย่าง เช่น วิธีเรียงหรือสถานะ
+  - `Skeleton` / `SkeletonGroup` สำหรับโครงหน้าระหว่างโหลด
+  - `LoadError` สำหรับหน้าโหลดไม่สำเร็จ ใช้คู่กับ `retry` จาก `useApiQuery`
+  - `EmptyState` ส่ง `mascot` (เช่น `duck-headphones`) ได้ ให้น้องเป็ดเปลี่ยนท่าตามหน้า
 - **จัดการ error ด้วย `async/await` + `try/catch`** ไม่ใช้ `.then().catch()`
   - controller ฝั่ง server ครอบทุกตัว แล้วส่ง error ต่อด้วย `next(err)` ไปที่ `middleware/error.js` ซึ่งแปลงเป็นข้อความภาษาไทยให้เอง
 

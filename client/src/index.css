@@ -1,14 +1,31 @@
 @import 'tailwindcss';
 
 /*
+ * โหมดมืดตามตัวเลือกของผู้ใช้ (lib/theme.js): ตั้ง data-theme="dark" ที่ <html>
+ * ถ้าเลือก "ตามเครื่อง" lib/theme.js จะตั้งค่านี้ตามการตั้งค่าของระบบให้เอง
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
  * Design tokens ของ Talk With Duck (ข้อ 2 แนวคิดด้าน UX/UI)
  * - สีหลักเหลืองเป็ด/ส้มอ่อน = อบอุ่น เป็นกันเอง
  * - สีรอง teal/ฟ้าพาสเทล = สงบ ปลอดภัย
- * - สีพื้นผิว (bg/surface/ink/...) สลับอัตโนมัติตามโหมดมืดของระบบ
+ * - สีพื้นผิว (bg/surface/ink/...) สลับตามโหมดสว่าง/มืด
+ * - สีตัวอักษรทุกคู่ต้องต่างจากพื้นหลังอย่างน้อย 4.5:1 (WCAG AA) เช่น ตัวอักษรบนพื้นเหลืองใช้ duck-800 ไม่ใช่ duck-600/700
+ *   ห้ามใส่ hex ใน class ตรง ๆ (ESLint กันไว้) ให้เพิ่ม token ที่นี่แทน
  */
 @theme {
   --font-sans: 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Mitr', 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif;
+
+  /* ภาษาไทยมีสระบน-ล่างและวรรณยุกต์ ต้องการระยะบรรทัดมากกว่าค่าเริ่มต้นของ Tailwind (ออกแบบมาสำหรับภาษาอังกฤษ) */
+  --text-xs--line-height: 1.5;
+  --text-sm--line-height: 1.6;
+  --text-base--line-height: 1.65;
+  --text-lg--line-height: 1.6;
+  --text-xl--line-height: 1.5;
+  --text-2xl--line-height: 1.4;
+  --text-3xl--line-height: 1.35;
 
   --color-duck-50: #fff9e6;
   --color-duck-100: #fff0bf;
@@ -18,11 +35,15 @@
   --color-duck-500: #f5b316;
   --color-duck-600: #d99a0b;
   --color-duck-700: #a87408;
+  /* ตัวอักษรบนพื้นเหลือง/ขาว (duck-700 ได้แค่ 3.6:1 บน duck-100) */
+  --color-duck-800: #855a04;
 
   --color-beak-300: #ffbf80;
   --color-beak-400: #ff9f43;
   --color-beak-500: #f7872a;
   --color-beak-600: #e06f14;
+  /* ตัวอักษรสีส้มบนพื้นสว่าง */
+  --color-beak-700: #a84b0b;
 
   --color-calm-50: #eefaf8;
   --color-calm-100: #d9f3ef;
@@ -32,10 +53,26 @@
   --color-calm-500: #3fa69c;
   --color-calm-600: #2e8880;
   --color-calm-700: #226862;
+  --color-calm-800: #1d5450;
+
+  /* ตัวอักษรบนพื้นเหลือง/ส้มของแบรนด์ (ปุ่มหลัก ชิปที่เลือก ฟองแชทของเรา) เหมือนกันทั้งสองโหมด */
+  --color-on-duck: #3b2f1e;
 
   --color-sky-soft: #cfe6fb;
-  --color-danger: #e5484d;
+  /* danger: ตัวอักษร/เส้นขอบ (โหมดมืดเปลี่ยนเป็นแดงอ่อนให้อ่านบนพื้นมืดได้) */
+  --color-danger: #c62828;
+  /* danger-strong: พื้นที่มีตัวอักษรขาวอยู่บน (ปุ่มลบ ไมค์ปิด toast error) เหมือนกันทั้งสองโหมด */
+  --color-danger-strong: #c62828;
   --color-danger-soft: #fde8e8;
+  /* ส่งใจ / สติกเกอร์หัวใจ */
+  --color-love: #c2255c;
+  --color-love-soft: #ffe1e8;
+
+  /* สีโพสต์อิทบนบอร์ดคำถาม (โหมดมืดการ์ดใช้ surface) */
+  --color-note-peach: #fff1e6;
+  --color-note-sky: #eef5fd;
+  /* พื้นหลังจอวิดีโอคาราโอเกะ (มืดเสมอ) */
+  --color-stage: #1c1814;
 
   /* พื้นผิว (โหมดสว่าง) */
   --color-bg: #fffbf2;
@@ -72,18 +109,24 @@
   }
 }
 
-/* โหมดมืด: สลับเฉพาะสีพื้นผิว สีแบรนด์คงเดิม */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1c1814;
-    --color-surface: #262019;
-    --color-surface-2: #312a20;
-    --color-ink: #f6eedd;
-    --color-muted: #b8a88e;
-    --color-line: #3e3528;
-    --color-danger-soft: #3a1f1f;
-    --shadow-soft: 0 6px 24px -8px rgb(0 0 0 / 0.6);
-  }
+:root {
+  color-scheme: light;
+}
+
+/* โหมดมืด: สลับเฉพาะสีพื้นผิวและสีตัวอักษรที่ต้องอ่านบนพื้นมืด สีแบรนด์คงเดิม */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #1c1814;
+  --color-surface: #262019;
+  --color-surface-2: #312a20;
+  --color-ink: #f6eedd;
+  --color-muted: #b8a88e;
+  --color-line: #3e3528;
+  --color-danger: #f87171;
+  --color-danger-soft: #3a1f1f;
+  --color-love: #ff8fb0;
+  --color-love-soft: #4a2230;
+  --shadow-soft: 0 6px 24px -8px rgb(0 0 0 / 0.6);
 }
 
 @layer base {
@@ -93,6 +136,7 @@
   body {
     @apply bg-bg text-ink font-sans antialiased;
     min-height: 100dvh;
+    line-height: 1.65;
     /* ลิงก์หรือคำยาวที่ไม่มีเว้นวรรค (เช่น URL ในกระทู้) ขึ้นบรรทัดใหม่แทนการดันหน้าให้กว้างเกินจอ */
     overflow-wrap: break-word;
     /* iPhone แนวนอน: เว้นรอยบาก (index.html ใช้ viewport-fit=cover) */
@@ -104,8 +148,9 @@
   h3 {
     @apply font-display;
   }
+  /* เส้นโฟกัสต้องต่างจากพื้นหลังอย่างน้อย 3:1 (calm-500 บนพื้นสว่างได้แค่ 2.85:1) */
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-calm-500;
+    @apply outline-2 outline-offset-2 outline-calm-600 dark:outline-calm-400;
   }
   /* Tailwind v4 ให้ปุ่มใช้ cursor ปกติ: ของที่กดได้ทุกอย่างเป็นรูปมือ กดไม่ได้เป็นเครื่องหมายห้าม */
   button:not(:disabled),
@@ -123,10 +168,14 @@
     @apply bg-surface rounded-(--radius-card) border border-line shadow-(--shadow-soft);
   }
   .input {
-    @apply w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-calm-400 focus:ring-4 focus:ring-calm-200/50 focus:outline-none transition;
+    @apply w-full rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted focus:border-calm-400 focus:ring-4 focus:ring-calm-200/50 focus:outline-none transition;
   }
   .label {
     @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+  /* ลิงก์ข้อความ เช่น "ดูทั้งหมด" "กลับไปเลือกห้อง" (calm-700 ได้ 6.5:1 ส่วน calm-600 ได้แค่ 4.2:1) */
+  .link {
+    @apply font-semibold text-calm-700 underline-offset-2 hover:underline dark:text-calm-300;
   }
 }
 
@@ -155,11 +204,13 @@
   font-size: 1rem;
 }
 
+/* ผู้ใช้ตั้งให้ลดการเคลื่อนไหว: เล่นแอนิเมชันรอบเดียวจบทันที (ไม่จำกัดรอบ ของที่หมุนวนจะสั่นทุกเฟรม) */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

@@ -67,7 +67,7 @@ error อื่น:
 
 | Method | Path | สิทธิ์ | หมายเหตุ |
 |---|---|---|---|
-| GET | `/rooms?type=&year=` | 🦆 | ห้องที่เปิดอยู่ กรองตามประเภท (`private`/`group`/`karaoke`) และชั้นปี |
+| GET | `/rooms?type=&year=` | 🦆 | ห้องที่เปิดอยู่ กรองตามประเภท (`private`/`group`/`karaoke`) และชั้นปี · แต่ละห้องมี `nowPlaying` (ชื่อเพลงที่กำลังเล่นในห้องคาราโอเกะ ไม่มีเพลง = `null`) |
 | POST | `/rooms` | 🦆 | `name, type, yearFilter?` → สร้างห้องแล้วใส่ผู้สร้างเป็น host |
 | POST | `/rooms/quick-match` ★ | 🦆 | `year?` → เข้าห้อง 1-1 ที่มีคนรอ ถ้าไม่มีสร้างใหม่ |
 | GET | `/rooms/:id` ★ | 🦆 | ข้อมูลห้อง + สมาชิก |

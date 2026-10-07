@@ -57,7 +57,7 @@ export const AvatarPicker = ({ value, onChange }) => {
       <button
         type="button"
         onClick={randomize}
-        className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-calm-600 hover:underline dark:text-calm-300"
+        className="link mt-2 inline-flex items-center gap-1.5 text-sm"
       >
         <Shuffle size={16} /> สุ่มเป็ดให้หน่อย
       </button>

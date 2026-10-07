@@ -10,6 +10,9 @@ const userSelect = { select: { id: true, nickname: true, avatar: true, year: tru
 
 export const roomInclude = {
   members: { where: { leftAt: null }, orderBy: { joinedAt: 'asc' }, include: { user: userSelect } },
+  // เพลงที่กำลังเล่น (ห้องคาราโอเกะ) ให้การ์ดในหน้า lobby บอกสถานะ "กำลังเล่น / คิวว่าง"
+  // ห้องหนึ่งมีเพลงที่กำลังเล่นได้ไม่เกิน 1 เพลง (queue.service advance) จึงไม่ต้องใส่ take
+  songs: { where: { status: 'playing' }, select: { songTitle: true } },
 };
 
 const capacityFor = (type) => (type === 'private' ? 2 : env.GROUP_ROOM_MAX);

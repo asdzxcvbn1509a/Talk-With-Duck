@@ -1,15 +1,16 @@
 // หน้าหลัก (Lobby): กิจกรรมประจำวัน · ตัวกรองชั้นปี/ประเภทห้อง · รายการห้อง · ทางลัดไปบอร์ด Q&A
-import { CloudOff, Hand, Pin, Plus, Shuffle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Hand, Pin, Plus, Shuffle } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import CreateRoomModal from '../components/CreateRoomModal';
 import { RoomTypeFilter, YearFilter } from '../components/Filters';
-import RoomCard from '../components/RoomCard';
-import { Button, EmptyState, Spinner } from '../components/ui';
+import RoomCard, { RoomCardSkeleton } from '../components/RoomCard';
+import { Button, EmptyState, LoadError, Skeleton, SkeletonGroup, Spinner } from '../components/ui';
 import { activityFor } from '../config/dailyActivities';
 import { TOPICS } from '../config/constants';
 import { listQuestions } from '../api/questions';
 import { quickMatch } from '../api/rooms';
+import { useApiQuery } from '../hooks/useApiQuery';
 import { useLobbyRooms } from '../hooks/useLobbyRooms';
 import { errorMessage } from '../lib/api';
 import { timeAgo } from '../lib/format';
@@ -17,19 +18,21 @@ import { roomPath } from '../lib/routes';
 import { useAuthStore } from '../stores/authStore';
 import { toast, useUiStore } from '../stores/uiStore';
 
+const LATEST_QUESTIONS = { limit: 3 };
+
 const DailyActivityCard = () => {
   const activity = activityFor();
   return (
     <Link
       to={activity.to}
-      className="relative block overflow-hidden rounded-(--radius-card) bg-gradient-to-br from-duck-300 via-duck-400 to-beak-400 p-6 text-[#3B2F1E] shadow-(--shadow-soft)"
+      className="relative block overflow-hidden rounded-(--radius-card) bg-gradient-to-br from-duck-300 via-duck-400 to-beak-400 p-6 text-on-duck shadow-(--shadow-soft)"
     >
       <p className="flex items-center gap-1.5 text-sm font-semibold opacity-80">
         <activity.icon size={16} />
         {activity.special ? 'Duck Community Week' : 'กิจกรรมวันนี้'}
       </p>
       <h2 className="mt-1 max-w-[80%] text-2xl font-medium">{activity.title}</h2>
-      <p className="mt-2 max-w-[75%] text-[#3B2F1E]/80">{activity.detail}</p>
+      <p className="mt-2 max-w-[75%] text-on-duck/80">{activity.detail}</p>
       <img
         src="/duck.svg"
         alt=""
@@ -40,18 +43,8 @@ const DailyActivityCard = () => {
 };
 
 const LatestQuestions = () => {
-  const [items, setItems] = useState(null);
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await listQuestions({ limit: 3 });
-        setItems(data.items);
-      } catch {
-        setItems([]);
-      }
-    };
-    load();
-  }, []);
+  const { data, error, loading } = useApiQuery(listQuestions, LATEST_QUESTIONS);
+  const items = data?.items ?? [];
 
   return (
     <section className="card p-5">
@@ -59,17 +52,28 @@ const LatestQuestions = () => {
         <h2 className="flex items-center gap-2 text-lg font-medium">
           <Pin size={20} className="text-beak-500" /> บอร์ดฝากคำถาม
         </h2>
-        <Link
-          to="/qa"
-          className="text-sm font-semibold text-calm-600 hover:underline dark:text-calm-300"
-        >
+        <Link to="/qa" className="link text-sm">
           ดูทั้งหมด
         </Link>
       </div>
-      {items === null ? (
-        <Spinner size={18} className="text-muted" />
-      ) : items.length === 0 ? (
-        <p className="text-sm text-muted">ยังไม่มีคำถาม เป็นคนแรกที่ทิ้งคำถามไว้สิ</p>
+      {loading ? (
+        <SkeletonGroup className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3 p-2">
+              <Skeleton className="h-9 w-9 shrink-0 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </SkeletonGroup>
+      ) : error || items.length === 0 ? (
+        <p className="text-sm text-muted">
+          {error
+            ? 'โหลดคำถามล่าสุดไม่สำเร็จ ดูทั้งหมดได้ที่บอร์ด'
+            : 'ยังไม่มีคำถาม เป็นคนแรกที่ทิ้งคำถามไว้สิ'}
+        </p>
       ) : (
         <ul className="space-y-2">
           {items.map((q) => {
@@ -80,7 +84,7 @@ const LatestQuestions = () => {
                   to={`/qa/${q.id}`}
                   className="flex items-center gap-3 rounded-2xl p-2 hover:bg-surface-2"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-duck-100 text-duck-700 dark:bg-surface-2 dark:text-duck-300">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300">
                     <topic.icon size={18} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -104,7 +108,7 @@ const LobbyPage = () => {
   const navigate = useNavigate();
   const { year, type } = useUiStore((s) => s.lobbyFilter);
   const setFilter = useUiStore((s) => s.setLobbyFilter);
-  const { rooms, loading, error } = useLobbyRooms({ year, type });
+  const { rooms, loading, error, retry } = useLobbyRooms({ year, type });
   const [creating, setCreating] = useState(false);
   const [matching, setMatching] = useState(false);
 
@@ -137,7 +141,8 @@ const LobbyPage = () => {
             type="button"
             onClick={startQuickMatch}
             disabled={matching}
-            className="card flex flex-col items-start justify-between gap-3 p-5 text-left transition hover:border-calm-300 disabled:opacity-60"
+            aria-busy={matching}
+            className="card flex flex-col items-start justify-between gap-3 p-5 text-left transition hover:border-calm-300 disabled:cursor-wait"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-calm-100 text-calm-700 dark:bg-calm-700/30 dark:text-calm-200">
               {matching ? <Spinner size={20} /> : <Shuffle size={20} />}
@@ -145,7 +150,11 @@ const LobbyPage = () => {
             <span>
               <span className="block font-display text-lg">สุ่มคุย 1-1</span>
               <span className="text-sm text-muted">
-                {year ? `จับคู่กับคนที่อยากคุยเรื่องปี ${year}` : 'จับคู่เพื่อนที่พร้อมฟัง'}
+                {matching
+                  ? 'กำลังหาเพื่อนที่พร้อมคุย…'
+                  : year
+                    ? `จับคู่กับคนที่อยากคุยเรื่องปี ${year}`
+                    : 'จับคู่เพื่อนที่พร้อมฟัง'}
               </span>
             </span>
           </button>
@@ -154,7 +163,7 @@ const LobbyPage = () => {
             onClick={() => setCreating(true)}
             className="card flex flex-col items-start justify-between gap-3 p-5 text-left transition hover:border-duck-300"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-duck-100 text-duck-700 dark:bg-duck-700/30 dark:text-duck-200">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-duck-100 text-duck-800 dark:bg-duck-700/30 dark:text-duck-200">
               <Plus size={20} />
             </span>
             <span>
@@ -168,19 +177,21 @@ const LobbyPage = () => {
       <section className="space-y-3">
         <div className="flex items-end justify-between">
           <h2 className="text-xl font-medium">ห้องที่เปิดอยู่</h2>
-          <span className="text-sm text-muted">{loading ? '' : `${rooms.length} ห้อง`}</span>
+          <span className="text-sm text-muted">
+            {loading || error ? '' : `${rooms.length} ห้อง`}
+          </span>
         </div>
         <YearFilter value={year} onChange={(y) => setFilter({ year: y })} />
         <RoomTypeFilter value={type} onChange={(t) => setFilter({ type: t })} />
 
         {loading ? (
-          <div className="flex justify-center py-12 text-muted">
-            <Spinner />
-          </div>
+          <SkeletonGroup className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <RoomCardSkeleton key={i} />
+            ))}
+          </SkeletonGroup>
         ) : error ? (
-          <EmptyState icon={CloudOff} title="โหลดรายการห้องไม่สำเร็จ">
-            {error}
-          </EmptyState>
+          <LoadError title="โหลดรายการห้องไม่สำเร็จ" message={error} onRetry={retry} />
         ) : rooms.length === 0 ? (
           <EmptyState
             title="ยังไม่มีห้องที่ตรงกับตัวกรอง"

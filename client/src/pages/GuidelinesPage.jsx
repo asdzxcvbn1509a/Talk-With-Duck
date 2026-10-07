@@ -94,7 +94,7 @@ const GuidelinesPage = () => {
         {RULES.map((rule, i) => (
           <li key={rule.title} className="card flex gap-4 p-5">
             <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-duck-100 text-duck-700 dark:bg-surface-2 dark:text-duck-300"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300"
               aria-hidden
             >
               <rule.icon size={24} />

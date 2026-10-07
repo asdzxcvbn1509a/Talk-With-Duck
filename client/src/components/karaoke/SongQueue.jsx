@@ -45,7 +45,7 @@ const SongQueue = ({ roomId, isHost }) => {
           >
             <span className="flex w-6 shrink-0 justify-center font-display text-muted">
               {playing ? (
-                <Play size={14} fill="currentColor" className="text-duck-700 dark:text-duck-300" />
+                <Play size={14} fill="currentColor" className="text-duck-800 dark:text-duck-300" />
               ) : (
                 index
               )}

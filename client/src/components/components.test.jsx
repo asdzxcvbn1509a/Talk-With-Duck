@@ -1,12 +1,27 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import DuckAvatar from './DuckAvatar';
 import { YearFilter } from './Filters';
+import LoveButton from './qa/LoveButton';
 import QuestionCard from './qa/QuestionCard';
 import { ReportButton } from './ReportModal';
 import RoomCard from './RoomCard';
-import { Modal } from './ui';
+import { Modal, Segmented } from './ui';
+
+vi.mock('../api/questions', () => ({ loveQuestion: vi.fn() }));
+
+/** promise ที่สั่งให้สำเร็จ/ล้มเหลวเองทีหลังได้ (จำลอง server ที่ยังไม่ตอบ) */
+const deferred = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
 
 const question = {
   id: 'q1',
@@ -87,6 +102,102 @@ describe('RoomCard', () => {
     );
     expect(screen.getByRole('link')).toHaveAttribute('href', '/karaoke/r1');
   });
+
+  it('ห้องคาราโอเกะบอกเพลงที่กำลังเล่น หรือคิวว่าง (บทที่ 2: Low Cognitive Load)', () => {
+    const karaoke = { ...room, type: 'karaoke', memberCount: 2, nowPlaying: null };
+    const { rerender } = render(
+      <MemoryRouter>
+        <RoomCard room={karaoke} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/คิวว่าง/)).toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <RoomCard room={{ ...karaoke, nowPlaying: 'ดอกไม้ให้คุณ' }} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('กำลังเล่น: ดอกไม้ให้คุณ')).toBeInTheDocument();
+    expect(screen.getByRole('link')).toHaveAccessibleName(/กำลังเล่น: ดอกไม้ให้คุณ/);
+  });
+
+  it('สมาชิกเกิน 5 คน แสดงอวาตาร์ 5 คนกับวงกลม +N', () => {
+    const members = Array.from({ length: 7 }, (_, i) => ({
+      userId: `u${i}`,
+      nickname: `เป็ด ${i}`,
+      avatar: 'duck-classic',
+    }));
+    render(
+      <MemoryRouter>
+        <RoomCard room={{ ...room, memberCount: 7, members }} />
+      </MemoryRouter>,
+    );
+    expect(screen.getAllByRole('img')).toHaveLength(5);
+    expect(screen.getByText('+2')).toBeInTheDocument();
+  });
+});
+
+describe('LoveButton', () => {
+  // เก็บข้อมูลคำถามไว้ใน state เหมือนหน้าบอร์ด ปุ่มจะได้เห็นค่าที่อัปเดตแล้ว
+  const Harness = () => {
+    const [q, setQ] = useState({ ...question, loveCount: 3, lovedByMe: false });
+    return <LoveButton question={q} onChange={(_id, patch) => setQ((x) => ({ ...x, ...patch }))} />;
+  };
+
+  it('กดแล้วจำนวนใจเพิ่มทันทีโดยไม่รอ server (optimistic) แล้วใช้ค่าจาก server', async () => {
+    const { loveQuestion } = await import('../api/questions');
+    const reply = deferred();
+    loveQuestion.mockReturnValueOnce(reply.promise);
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งใจให้คำถามนี้' }));
+    const button = screen.getByRole('button', { name: 'เลิกส่งใจ' });
+    expect(button).toHaveTextContent('4');
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+
+    await act(async () => reply.resolve({ data: { loved: true, loveCount: 5 } }));
+    expect(button).toHaveTextContent('5');
+  });
+
+  it('server ตอบไม่สำเร็จ → คืนค่าเดิม', async () => {
+    const { loveQuestion } = await import('../api/questions');
+    const reply = deferred();
+    loveQuestion.mockReturnValueOnce(reply.promise);
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ส่งใจให้คำถามนี้' }));
+    expect(screen.getByRole('button', { name: 'เลิกส่งใจ' })).toHaveTextContent('4');
+
+    await act(async () => reply.reject(new Error('offline')));
+    const button = screen.getByRole('button', { name: 'ส่งใจให้คำถามนี้' });
+    expect(button).toHaveTextContent('3');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
+describe('Segmented', () => {
+  it('ปุ่มที่เลือกอยู่มี aria-pressed และกดแล้วแจ้งค่าใหม่', () => {
+    const onChange = vi.fn();
+    render(
+      <Segmented
+        label="เรียงลำดับ"
+        options={[
+          { value: 'latest', label: 'ล่าสุด' },
+          { value: 'popular', label: 'ได้ใจมากสุด' },
+        ]}
+        value="latest"
+        onChange={onChange}
+      />,
+    );
+    expect(screen.getByRole('group', { name: 'เรียงลำดับ' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ล่าสุด' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'ได้ใจมากสุด' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'ได้ใจมากสุด' }));
+    expect(onChange).toHaveBeenCalledWith('popular');
+  });
 });
 
 describe('Modal', () => {
@@ -108,6 +219,46 @@ describe('Modal', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(latest).toHaveBeenCalledTimes(1);
     expect(first).not.toHaveBeenCalled();
+  });
+
+  it('กด Tab แล้วโฟกัสวนอยู่ในหน้าต่าง ไม่หลุดไปหน้าด้านหลัง', () => {
+    render(
+      <>
+        <button type="button">ปุ่มหน้าหลัง</button>
+        <Modal open onClose={() => {}} title="ทดสอบ">
+          <input aria-label="ช่องพิมพ์" />
+          <button type="button">ตกลง</button>
+        </Modal>
+      </>,
+    );
+    // ปุ่ม "ปิด" มี 2 ปุ่ม: พื้นหลังมืด (กดเพื่อปิด) กับปุ่ม X บนหัวหน้าต่าง
+    const [backdrop, close] = screen.getAllByRole('button', { name: 'ปิด' });
+    const ok = screen.getByRole('button', { name: 'ตกลง' });
+
+    ok.focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(close).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(ok).toHaveFocus();
+
+    // พื้นหลังกด Tab ไปไม่ถึง (กดเมาส์/แตะเพื่อปิดได้ตามเดิม)
+    expect(backdrop).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('เปิดอยู่ล็อกการเลื่อนหน้าด้านหลัง ปิดแล้วคืนค่าเดิม', () => {
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="ทดสอบ">
+        เนื้อหา
+      </Modal>,
+    );
+    expect(document.body.style.overflow).toBe('hidden');
+    rerender(
+      <Modal open={false} onClose={() => {}} title="ทดสอบ">
+        เนื้อหา
+      </Modal>,
+    );
+    expect(document.body.style.overflow).toBe('');
   });
 });
 

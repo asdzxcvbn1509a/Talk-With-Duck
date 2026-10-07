@@ -79,7 +79,7 @@ const CreateRoomModal = ({
                         : 'border-line hover:border-duck-300'
                     }`}
                   >
-                    <type.icon size={26} className="text-duck-700 dark:text-duck-300" />
+                    <type.icon size={26} className="text-duck-800 dark:text-duck-300" />
                     <span className="font-semibold">{type.label}</span>
                   </button>
                 );

@@ -33,10 +33,11 @@ export const ANONYMOUS_AVATAR = 'duck-anon';
 
 // สีพื้น/สีไอคอนของสติกเกอร์ (ใช้ร่วมกับ StickerBadge ใน ChatPanel)
 const STICKER_TONES = {
-  duck: 'bg-duck-100 text-duck-700 dark:bg-duck-700/30 dark:text-duck-200',
-  beak: 'bg-beak-300/30 text-beak-600 dark:text-beak-300',
+  duck: 'bg-duck-100 text-duck-800 dark:bg-duck-700/30 dark:text-duck-200',
+  beak: 'bg-beak-300/30 text-beak-700 dark:text-beak-300',
   calm: 'bg-calm-100 text-calm-700 dark:bg-calm-700/30 dark:text-calm-200',
-  love: 'bg-[#ffe1e8] text-[#e0487a] dark:bg-[#4a2230] dark:text-[#ff8fb0]',
+  // สีหัวใจเป็น token (index.css) โหมดมืดเปลี่ยนสีให้เอง
+  love: 'bg-love-soft text-love',
 };
 
 // key ต้องตรงกับ STICKER_KEYS ของ server (เก็บลงฐานข้อมูล) ส่วนไอคอน/label เปลี่ยนได้

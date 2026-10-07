@@ -98,6 +98,8 @@ export const presentRoom = (room) => {
     isActive: room.isActive,
     memberCount: members.length,
     members,
+    // ชื่อเพลงที่กำลังเล่นในห้องคาราโอเกะ (ไม่มีเพลง/ห้องประเภทอื่น = null)
+    nowPlaying: room.songs?.[0]?.songTitle ?? null,
     createdAt: room.createdAt,
   };
 };

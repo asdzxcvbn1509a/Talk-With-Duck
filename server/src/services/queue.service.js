@@ -5,7 +5,7 @@ import { clearKaraokeState } from '../realtime/karaokeState.js';
 import { emitToRoom } from '../realtime/hub.js';
 import { presentSong } from '../utils/present.js';
 import { badRequest, forbidden, notFound, tooMany } from '../utils/httpError.js';
-import { assertActiveMember } from './room.service.js';
+import { assertActiveMember, broadcastRoomSummary } from './room.service.js';
 
 const include = { requester: { select: { id: true, nickname: true, avatar: true, year: true } } };
 
@@ -24,6 +24,8 @@ export const listQueue = async (roomId) => {
 const broadcastQueue = async (roomId) => {
   const queue = await listQueue(roomId);
   emitToRoom(roomId, 'queue:updated', { roomId, queue });
+  // เพลงที่กำลังเล่นอาจเปลี่ยน: อัปเดตการ์ดห้องในหน้า lobby ("กำลังเล่น: ชื่อเพลง / คิวว่าง")
+  await broadcastRoomSummary(roomId);
   return queue;
 };
 

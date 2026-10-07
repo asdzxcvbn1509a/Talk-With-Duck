@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { LIMITS, TOPICS, YEARS } from '../../config/constants';
 import { Button, Chip, Field, Toggle } from '../ui';
 
+const TITLE_MIN = 5;
+
 const QuestionForm = ({
   initial,
   onSubmit,
@@ -19,6 +21,7 @@ const QuestionForm = ({
     isAnonymous: initial?.isAnonymous ?? false,
   });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const titleTooShort = form.title.trim().length < TITLE_MIN;
 
   const submit = (e) => {
     e.preventDefault();
@@ -33,7 +36,12 @@ const QuestionForm = ({
 
   return (
     <form onSubmit={submit} className="space-y-5">
-      <Field label="หัวข้อคำถาม" htmlFor="q-title">
+      {/* บอกเหตุผลที่ปุ่มโพสต์ยังกดไม่ได้ ไม่ให้ผู้ใช้งงว่าทำไมกดไม่ติด */}
+      <Field
+        label="หัวข้อคำถาม"
+        htmlFor="q-title"
+        hint={`${titleTooShort ? `อย่างน้อย ${TITLE_MIN} ตัวอักษร · ` : ''}${form.title.length}/${LIMITS.questionTitleMax}`}
+      >
         <input
           id="q-title"
           className="input"
@@ -99,11 +107,7 @@ const QuestionForm = ({
             ยกเลิก
           </Button>
         )}
-        <Button
-          type="submit"
-          loading={submitting}
-          disabled={form.title.trim().length < 5 || !form.content.trim()}
-        >
+        <Button type="submit" loading={submitting} disabled={titleTooShort || !form.content.trim()}>
           {submitLabel}
         </Button>
       </div>

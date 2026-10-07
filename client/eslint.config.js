@@ -35,6 +35,12 @@ const arrowFunctionRules = {
       selector: `${node}/\\p{Extended_Pictographic}/u]`,
       message: 'ห้ามใช้ emoji ให้ใช้ไอคอนจาก lucide-react แทน (ค้นชื่อได้ที่ lucide.dev)',
     })),
+    // สีใน class ใช้ token ของ src/index.css เท่านั้น: token ผ่านการตรวจ contrast และเปลี่ยนตามโหมดมืดได้
+    ...['Literal[value=', 'TemplateElement[value.raw='].map((node) => ({
+      selector: `${node}/\\[#[0-9a-fA-F]{3,8}\\]/]`,
+      message:
+        'ห้ามใส่สี hex ใน class ตรง ๆ (เช่น text-[#…]) ให้ใช้หรือเพิ่ม token สีใน src/index.css (เช่น text-on-duck)',
+    })),
   ],
   // arrow function ไม่ถูก hoist เหมือน function: ห้ามเรียกใช้ก่อนบรรทัดที่ประกาศ
   'no-use-before-define': ['error', { functions: false, classes: true, variables: false }],
