@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { expectedPosition, needsSeek, songOver } from './karaokeSync';
-import { timeAgo, yearLabel } from './format';
-import { rmsLevel } from './rtc/levels';
+import { clockTime, timeAgo, yearLabel } from './format';
+import { SPEAKING_THRESHOLD, quantizeLevel, rmsLevel } from './rtc/levels';
 import { activityFor } from '../config/dailyActivities';
 import { useRoomStore } from '../stores/roomStore';
 
@@ -47,6 +47,20 @@ describe('format', () => {
     expect(yearLabel(2)).toBe('ปี 2');
     expect(yearLabel(null)).toBe('ทุกชั้นปี');
   });
+  it('ใช้ตัวจัดรูปแบบร่วมกันแล้วได้ผลเหมือน toLocaleTimeString/toLocaleDateString เดิม', () => {
+    const sent = new Date(2026, 9, 1, 9, 5);
+    expect(clockTime(sent.toISOString())).toBe(
+      sent.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+    );
+    const old = now - 30 * 86400_000;
+    expect(timeAgo(old, now)).toBe(
+      new Date(old).toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+        year: '2-digit',
+      }),
+    );
+  });
 });
 
 describe('Speaking Indicator', () => {
@@ -54,6 +68,13 @@ describe('Speaking Indicator', () => {
     expect(rmsLevel(new Uint8Array(512).fill(128))).toBe(0);
     const loud = new Uint8Array(512).map((_, i) => (i % 2 ? 200 : 56));
     expect(rmsLevel(loud)).toBeGreaterThan(0.5);
+  });
+
+  it('ปัดความดังก่อนส่งให้หน้าเว็บ: เงียบ = 0 · พูดเบาสุดยังนับว่ากำลังพูด · ค่าใกล้กันได้ค่าเดียวกัน', () => {
+    expect(quantizeLevel(0)).toBe(0);
+    expect(quantizeLevel(SPEAKING_THRESHOLD - 0.001)).toBe(0);
+    expect(quantizeLevel(SPEAKING_THRESHOLD)).toBeGreaterThan(SPEAKING_THRESHOLD);
+    expect(quantizeLevel(0.101)).toBe(quantizeLevel(0.109));
   });
 });
 
@@ -81,5 +102,16 @@ describe('roomStore', () => {
     expect(useRoomStore.getState().members.map((m) => m.userId)).toEqual(['a', 'b']);
     s.updateMember('a', { isMuted: true });
     expect(useRoomStore.getState().members[0].isMuted).toBe(true);
+  });
+
+  it('ระดับเสียงเท่าเดิมไม่เปลี่ยน state (หน้าเว็บไม่ต้อง render ใหม่ทุก 100 ms)', () => {
+    const s = useRoomStore.getState();
+    s.reset('r1');
+    s.setLevels({ a: 0, b: 0.12 });
+    const first = useRoomStore.getState().levels;
+    s.setLevels({ a: 0, b: 0.12 });
+    expect(useRoomStore.getState().levels).toBe(first);
+    s.setLevels({ a: 0.04, b: 0.12 });
+    expect(useRoomStore.getState().levels).toEqual({ a: 0.04, b: 0.12 });
   });
 });

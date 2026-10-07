@@ -19,6 +19,11 @@ export const useRoomLifecycle = (roomId, { backTo = '/lobby' } = {}) => {
   const [joinError, setJoinError] = useState(null);
   const autoJoinStarted = useRef(false);
 
+  // ระหว่างผู้ใช้อ่านหน้าก่อนเข้าห้อง: ต่อ socket และโหลด ICE servers รอไว้ กดเข้าห้องแล้วจะเร็วขึ้น
+  useEffect(() => {
+    roomSession.prepare();
+  }, []);
+
   useEffect(() => {
     clearTimeout(pendingLeaves.get(roomId));
     pendingLeaves.delete(roomId);

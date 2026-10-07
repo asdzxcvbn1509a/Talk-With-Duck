@@ -23,6 +23,13 @@ const arrowFunctionRules = {
       selector: 'CallExpression[callee.property.name=/^(then|catch|finally)$/]',
       message: 'ใช้ async/await กับ try/catch แทน .then/.catch/.finally',
     },
+    // อ่านค่าจาก store ด้วย selector เสมอ: useRoomStore() ทั้งก้อนทำให้ render ใหม่ทุกครั้งที่ค่าใดก็ได้เปลี่ยน
+    // (ระดับเสียงในห้องเปลี่ยนทุก 100 ms)
+    {
+      selector: 'CallExpression[callee.name=/^use\\w*Store$/][arguments.length=0]',
+      message:
+        'อ่านค่าจาก store ด้วย selector เช่น useRoomStore((s) => s.members) ไม่ใช่ทั้ง store (จะ render ใหม่ทุกครั้งที่ค่าใดก็ได้ใน store เปลี่ยน)',
+    },
     // ไอคอนใช้ lucide-react เท่านั้น ห้ามใส่ emoji ในโค้ด (รูปเป็ดใช้ /duck.svg หรือ DuckAvatar)
     ...['Literal[value=', 'JSXText[value=', 'TemplateElement[value.raw='].map((node) => ({
       selector: `${node}/\\p{Extended_Pictographic}/u]`,

@@ -3,7 +3,7 @@ import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { clearKaraokeState } from '../realtime/karaokeState.js';
 import { emitToLobby, emitToRoom } from '../realtime/hub.js';
-import { presentMember, presentRoom } from '../utils/present.js';
+import { presentRoom } from '../utils/present.js';
 import { conflict, forbidden, notFound } from '../utils/httpError.js';
 
 const userSelect = { select: { id: true, nickname: true, avatar: true, year: true } };
@@ -17,11 +17,19 @@ const capacityFor = (type) => (type === 'private' ? 2 : env.GROUP_ROOM_MAX);
 const lockRoom = (tx, roomId) =>
   tx.$queryRaw`SELECT id FROM rooms WHERE id = ${roomId}::uuid FOR UPDATE`;
 
-/** ส่งข้อมูลห้องล่าสุดไปให้ทุกคนที่เปิดหน้า lobby อยู่ */
+/**
+ * ส่งข้อมูลห้องล่าสุดไปให้ทุกคนที่เปิดหน้า lobby อยู่
+ * คืนข้อมูลห้องชุดที่ส่งไป (ห้องปิดแล้ว = null) ผู้เรียกจะได้ใช้ต่อโดยไม่ต้องอ่านห้องซ้ำ
+ */
 export const broadcastRoomSummary = async (roomId) => {
   const room = await prisma.room.findUnique({ where: { id: roomId }, include: roomInclude });
-  if (room?.isActive) emitToLobby('lobby:room-upserted', presentRoom(room));
-  else emitToLobby('lobby:room-removed', { id: roomId });
+  if (!room?.isActive) {
+    emitToLobby('lobby:room-removed', { id: roomId });
+    return null;
+  }
+  const summary = presentRoom(room);
+  emitToLobby('lobby:room-upserted', summary);
+  return summary;
 };
 
 export const listRooms = async ({ type, year }) => {
@@ -74,13 +82,12 @@ const addMemberTx = async (tx, roomId, userId) => {
   return { member, joined: true };
 };
 
-const announceJoin = async (roomId, memberId) => {
-  const member = await prisma.roomMember.findUnique({
-    where: { id: memberId },
-    include: { user: userSelect },
-  });
-  emitToRoom(roomId, 'room:member-joined', presentMember(member));
-  await broadcastRoomSummary(roomId);
+/** แจ้งว่ามีคนเข้าห้อง: หาข้อมูลสมาชิกใหม่จากข้อมูลห้องชุดที่ส่งให้ lobby ไม่ต้องอ่านสมาชิกซ้ำ */
+const announceJoin = async (roomId, userId) => {
+  const room = await broadcastRoomSummary(roomId);
+  const member = room?.members.find((m) => m.userId === userId);
+  if (member) emitToRoom(roomId, 'room:member-joined', member);
+  return room;
 };
 
 /** อยู่ได้ทีละห้อง: ออกจากห้องอื่นที่ค้างอยู่ก่อนเข้าห้องใหม่ */
@@ -101,15 +108,17 @@ export const createRoom = async (user, { name, type, yearFilter = null }) => {
     await addMemberTx(tx, created.id, user.id);
     return created;
   });
-  await broadcastRoomSummary(room.id);
-  return getRoom(room.id);
+  // ข้อมูลที่ส่งให้ lobby คือข้อมูลล่าสุดหลังสร้างห้องแล้ว จึงคืนชุดนั้นได้เลย
+  return (await broadcastRoomSummary(room.id)) ?? getRoom(room.id);
 };
 
 export const joinRoom = async (roomId, userId) => {
   await leaveOtherRooms(userId, roomId);
-  const { member, joined } = await prisma.$transaction((tx) => addMemberTx(tx, roomId, userId));
-  if (joined) await announceJoin(roomId, member.id);
-  return getRoom(roomId);
+  const { joined } = await prisma.$transaction((tx) => addMemberTx(tx, roomId, userId));
+  // เพิ่งเข้าห้อง: คืนข้อมูลห้องชุดเดียวกับที่ประกาศให้ทุกคน
+  // เป็นสมาชิกอยู่แล้ว (หรือห้องเพิ่งปิดไประหว่างนั้น) จึงค่อยอ่านห้องใหม่
+  const room = joined ? await announceJoin(roomId, userId) : null;
+  return room ?? getRoom(roomId);
 };
 
 /**

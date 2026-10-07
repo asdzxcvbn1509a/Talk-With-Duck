@@ -137,6 +137,7 @@ npm run dev
     ```
 
   - ถ้าตั้งใจไม่ทำอะไรใน `catch` ให้เขียนคอมเมนต์บอกเหตุผลไว้ (catch ว่างจะไม่ผ่าน lint)
+- **อ่านค่าจาก store (Zustand) ด้วย selector เสมอ** เช่น `useRoomStore((s) => s.members)` ไม่ใช่ `useRoomStore()` ทั้งก้อน เพราะ component จะ render ใหม่ทุกครั้งที่ค่าใดก็ได้ใน store เปลี่ยน (ระดับเสียงในห้องเปลี่ยนทุก 100 ms)
 - **ESLint คอยตรวจให้:** `npm run lint` จะแจ้ง error ถ้าเผลอ
   - เขียน `function`
   - เรียกใช้ก่อนประกาศ
@@ -145,6 +146,7 @@ npm run dev
   - import `api` ไปเรียกตรง ๆ ในหน้าเว็บ
   - ใส่ emoji ในโค้ดฝั่ง client
   - ใช้ `alert` / `confirm` / `prompt` ของเบราว์เซอร์
+  - เรียก `useRoomStore()` / `useAuthStore()` / `useUiStore()` โดยไม่มี selector
 
 ## โครงสร้างโปรเจกต์
 

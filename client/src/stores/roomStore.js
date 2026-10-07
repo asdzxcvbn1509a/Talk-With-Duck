@@ -1,5 +1,6 @@
 // ข้อมูลห้องที่กำลังเข้าร่วม (ข้อ 3.5.3: roomStore): สมาชิก สถานะไมค์ แชท คิวเพลง
 import { create } from 'zustand';
+import { shallow } from 'zustand/shallow';
 
 const initial = {
   roomId: null,
@@ -67,5 +68,8 @@ export const useRoomStore = create((set, get) => ({
     set({ streams: rest });
   },
   setPeerState: (userId, state) => set({ peerStates: { ...get().peerStates, [userId]: state } }),
-  setLevels: (levels) => set({ levels }),
+  // ตัววัดเสียงส่งมาทุก 100 ms: ค่าเท่าเดิม (เช่น ทุกคนเงียบ) ไม่ต้องแจ้งให้หน้าเว็บ render ใหม่
+  setLevels: (levels) => {
+    if (!shallow(get().levels, levels)) set({ levels });
+  },
 }));

@@ -15,7 +15,9 @@ export const FullPageLoader = ({ label = 'กำลังโหลด…' }) => 
 };
 
 export const RequireAuth = () => {
-  const { status, user } = useAuthStore();
+  // ใช้ selector: ไม่ render ทั้งแอปใหม่ทุกครั้งที่ต่ออายุ access token
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   const location = useLocation();
   if (status === 'loading') return <FullPageLoader />;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
@@ -39,7 +41,8 @@ export const RequireModerator = () => {
 
 /** หน้าเข้าสู่ระบบ: ถ้าล็อกอินแล้วพาไปหน้าหลัก */
 export const GuestOnly = () => {
-  const { status, user } = useAuthStore();
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
   if (status === 'loading') return <FullPageLoader />;
   if (user) return <Navigate to="/lobby" replace />;
   return <Outlet />;

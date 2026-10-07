@@ -1,6 +1,8 @@
 // ตัวแทนผู้ใช้ในห้อง: อวาตาร์เป็ด + วงคลื่นเรืองแสงเมื่อกำลังพูด + สถานะไมค์
 import { Crown, MicOff } from 'lucide-react';
+import { memo } from 'react';
 import { SPEAKING_THRESHOLD } from '../../lib/rtc/levels';
+import { useRoomStore } from '../../stores/roomStore';
 import DuckAvatar from '../DuckAvatar';
 import { ReportButton } from '../ReportModal';
 import VolumeControl from './VolumeControl';
@@ -9,12 +11,13 @@ const ParticipantTile = ({
   member,
   isMe,
   isHost,
-  level = 0,
   online = true,
   connecting = false,
   size = 88,
   compact = false,
 }) => {
+  // อ่านระดับเสียงของคนนี้เอง: ตอนมีคนพูด render ใหม่เฉพาะช่องของคนนั้น ไม่ใช่ทั้งห้อง
+  const level = useRoomStore((s) => s.levels[member.userId] ?? 0);
   const speaking = !member.isMuted && level > SPEAKING_THRESHOLD;
   const status = !online ? 'หลุดการเชื่อมต่อ' : connecting ? 'กำลังเชื่อมต่อเสียง…' : '';
   return (
@@ -73,4 +76,5 @@ const ParticipantTile = ({
   );
 };
 
-export default ParticipantTile;
+// memo: รายชื่อ render ใหม่ (เช่น มีคนเข้าห้อง) แล้วช่องที่ข้อมูลไม่เปลี่ยนไม่ต้อง render ตาม
+export default memo(ParticipantTile);

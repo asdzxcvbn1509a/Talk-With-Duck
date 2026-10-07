@@ -11,14 +11,17 @@ const userSelect = {
   select: { id: true, nickname: true, avatar: true, year: true, isBanned: true },
 };
 
-// โหลดสิ่งที่ถูกรายงาน พร้อมเจ้าของตัวจริง (ผู้ดูแลต้องเห็นแม้โพสต์จะไม่ระบุตัวตน)
-const loaders = {
-  question: (id) => prisma.question.findUnique({ where: { id }, include: { user: userSelect } }),
-  answer: (id) => prisma.answer.findUnique({ where: { id }, include: { user: userSelect } }),
-  message: (id) => prisma.message.findUnique({ where: { id }, include: { user: userSelect } }),
-  user: (id) => prisma.user.findUnique({ where: { id }, ...userSelect }),
-  room: (id) => prisma.room.findUnique({ where: { id }, include: { host: userSelect } }),
+// ตารางของสิ่งที่ถูกรายงานแต่ละประเภท และข้อมูลเจ้าของตัวจริงที่ต้องโหลดมาด้วย
+// (ผู้ดูแลต้องเห็นเจ้าของแม้โพสต์จะไม่ระบุตัวตน)
+const targetTables = {
+  question: { model: prisma.question, args: { include: { user: userSelect } } },
+  answer: { model: prisma.answer, args: { include: { user: userSelect } } },
+  message: { model: prisma.message, args: { include: { user: userSelect } } },
+  user: { model: prisma.user, args: userSelect },
+  room: { model: prisma.room, args: { include: { host: userSelect } } },
 };
+
+const targetKey = (type, id) => `${type}:${id}`;
 
 const ownerOf = (type, target) => {
   if (type === 'user') return target;
@@ -54,9 +57,33 @@ const previewOf = (type, target) => {
 };
 
 const loadTarget = async (type, id) => {
-  const target = await loaders[type](id);
+  const { model, args } = targetTables[type];
+  const target = await model.findUnique({ where: { id }, ...args });
   if (!target) throw notFound('TARGET_NOT_FOUND', 'ไม่พบสิ่งที่ต้องการรายงาน');
   return target;
+};
+
+/**
+ * โหลดสิ่งที่ถูกรายงานของทุกรายการ ประเภทละ 1 query (ไม่เกิน 5 query)
+ * แทนการโหลดทีละรายการ ซึ่งสูงสุด 200 query แย่ง connection ของฐานข้อมูลกับผู้ใช้คนอื่น
+ * คืน Map ของ "ประเภท:id" → ข้อมูล (สิ่งที่ถูกลบไปแล้วจะไม่มีใน Map)
+ */
+const loadTargetsOf = async (reports) => {
+  const idsByType = new Map();
+  for (const r of reports) {
+    if (!idsByType.has(r.targetType)) idsByType.set(r.targetType, new Set());
+    idsByType.get(r.targetType).add(r.targetId);
+  }
+
+  const loaded = new Map();
+  await Promise.all(
+    [...idsByType].map(async ([type, ids]) => {
+      const { model, args } = targetTables[type];
+      const rows = await model.findMany({ where: { id: { in: [...ids] } }, ...args });
+      for (const row of rows) loaded.set(targetKey(type, row.id), row);
+    }),
+  );
+  return loaded;
 };
 
 export const createReport = async (reporter, { targetType, targetId, reason, details }) => {
@@ -88,31 +115,31 @@ export const listReports = async ({ status }) => {
 
   const counts = new Map();
   for (const r of reports) {
-    const key = `${r.targetType}:${r.targetId}`;
+    const key = targetKey(r.targetType, r.targetId);
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
+  const targets = await loadTargetsOf(reports);
 
-  return Promise.all(
-    reports.map(async (r) => {
-      const target = await loaders[r.targetType](r.targetId);
-      const owner = target ? ownerOf(r.targetType, target) : null;
-      return {
-        id: r.id,
-        targetType: r.targetType,
-        targetId: r.targetId,
-        reason: r.reason,
-        details: r.details,
-        status: r.status,
-        createdAt: r.createdAt,
-        reviewedAt: r.reviewedAt,
-        reporter: publicUser(r.reporter),
-        reviewedBy: publicUser(r.reviewedBy),
-        sameTargetCount: counts.get(`${r.targetType}:${r.targetId}`),
-        target: target ? { exists: true, ...previewOf(r.targetType, target) } : { exists: false },
-        owner: owner ? { ...publicUser(owner), isBanned: owner.isBanned } : null,
-      };
-    }),
-  );
+  return reports.map((r) => {
+    const key = targetKey(r.targetType, r.targetId);
+    const target = targets.get(key);
+    const owner = target ? ownerOf(r.targetType, target) : null;
+    return {
+      id: r.id,
+      targetType: r.targetType,
+      targetId: r.targetId,
+      reason: r.reason,
+      details: r.details,
+      status: r.status,
+      createdAt: r.createdAt,
+      reviewedAt: r.reviewedAt,
+      reporter: publicUser(r.reporter),
+      reviewedBy: publicUser(r.reviewedBy),
+      sameTargetCount: counts.get(key),
+      target: target ? { exists: true, ...previewOf(r.targetType, target) } : { exists: false },
+      owner: owner ? { ...publicUser(owner), isBanned: owner.isBanned } : null,
+    };
+  });
 };
 
 const hideTarget = async (type, target) => {

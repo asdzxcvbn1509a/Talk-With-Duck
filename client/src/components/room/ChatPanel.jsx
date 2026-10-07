@@ -1,8 +1,9 @@
 // แชทข้อความสั้น + สติกเกอร์เป็ด: ให้คนที่ยังไม่พร้อมเปิดไมค์มีส่วนร่วมได้ (ข้อ 3.5.6 ข้อ 5)
 import { Send, Sparkles, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { LIMITS, STICKERS } from '../../config/constants';
 import { errorMessage } from '../../lib/api';
+import { clockTime } from '../../lib/format';
 import { roomSession } from '../../lib/roomSession';
 import { useAuthStore } from '../../stores/authStore';
 import { useRoomStore } from '../../stores/roomStore';
@@ -14,10 +15,7 @@ import { IconButton } from '../ui';
 const stickerOf = (key) => STICKERS.find((s) => s.key === key);
 
 const Message = ({ message, mine }) => {
-  const time = new Date(message.createdAt).toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const time = clockTime(message.createdAt);
   const sticker = message.type === 'sticker' ? stickerOf(message.content) : null;
   return (
     <li className={`group flex items-end gap-2 ${mine ? 'flex-row-reverse' : ''}`}>
@@ -61,6 +59,9 @@ const Message = ({ message, mine }) => {
     </li>
   );
 };
+
+// memo: พิมพ์ทีละตัวหรือมีข้อความใหม่ ข้อความเดิม (เก็บได้ถึง 200 ข้อความ) ไม่ต้อง render ใหม่ทั้งรายการ
+const MemoMessage = memo(Message);
 
 const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อง' }) => {
   const messages = useRoomStore((s) => s.messages);
@@ -113,7 +114,7 @@ const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อ�
           </li>
         )}
         {messages.map((m) => (
-          <Message key={m.id} message={m} mine={m.user?.id === me} />
+          <MemoMessage key={m.id} message={m} mine={m.user?.id === me} />
         ))}
       </ul>
       {showStickers && (

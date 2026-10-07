@@ -2,7 +2,7 @@
 // รวม: ไมโครโฟน → เข้าห้องผ่าน REST → Socket.IO → WebRTC Mesh → Speaking Indicator
 import { joinRoom, leaveRoom, sendMessage as postMessage } from '../api/rooms';
 import { readIceServers } from '../api/rtc';
-import { connectedSocket, measureClockOffset } from './socket';
+import { connectedSocket, getSocket, measureClockOffset } from './socket';
 import { PeerMesh } from './rtc/PeerMesh';
 import { createLevelMonitor, getAudioContext } from './rtc/levels';
 import { useRoomStore } from '../stores/roomStore';
@@ -12,13 +12,18 @@ import { toast } from '../stores/uiStore';
 const store = () => useRoomStore.getState();
 const myId = () => useAuthStore.getState().user?.id;
 
-let iceServersCache = null;
+// ขอรายชื่อ STUN/TURN ครั้งเดียวต่อการเปิดเว็บ เก็บเป็น promise จึงเรียกซ้อนกันได้ (เช่น ตอนเปิดหน้าห้องกับตอนกดเข้าห้อง)
+// โดยยิงคำขอเดียว · ขอไม่สำเร็จให้ล้างทิ้ง ครั้งหน้าจะขอใหม่
+let iceServersRequest = null;
 const getIceServers = async () => {
-  if (!iceServersCache) {
-    const { data } = await readIceServers();
-    iceServersCache = data.iceServers;
+  const request = (iceServersRequest ??= readIceServers());
+  try {
+    const { data } = await request;
+    return data.iceServers;
+  } catch (err) {
+    if (iceServersRequest === request) iceServersRequest = null;
+    throw err;
   }
-  return iceServersCache;
 };
 
 /** วัดเวลาที่ต่างจาก server ไว้ซิงก์เพลงคาราโอเกะ (ไม่ต้องรอผลก่อนเข้าห้อง) */
@@ -46,6 +51,16 @@ class RoomSession {
   monitor = null;
   handlers = [];
 
+  /** เปิดหน้าห้อง (ก่อนกดเข้า): ต่อ socket และโหลด ICE servers รอไว้ ตอนกดเข้าห้องจะได้ไม่ต้องรอสองอย่างนี้ */
+  async prepare() {
+    getSocket();
+    try {
+      await getIceServers();
+    } catch {
+      // โหลดล่วงหน้าไม่สำเร็จไม่เป็นไร ตอนกดเข้าห้องจะขอใหม่อีกครั้ง
+    }
+  }
+
   /** เรียกจากการกดปุ่ม "เข้าห้อง" เท่านั้น (เบราว์เซอร์ต้องการ user gesture สำหรับไมค์/เสียง) */
   async join(roomId, { withMic = true, startMuted = false } = {}) {
     if (this.roomId === roomId && store().status === 'joined') return;
@@ -67,8 +82,13 @@ class RoomSession {
       const track = this.localStream?.getAudioTracks()[0];
       if (track && startMuted) track.enabled = false;
 
-      await joinRoom(roomId);
-      const [iceServers, socket] = await Promise.all([getIceServers(), connectedSocket()]);
+      // ขอเข้าห้อง (REST) ต่อ socket และโหลด ICE servers พร้อมกัน ไม่ต้องรอทีละขั้น
+      // (room:join ด้านล่างยังส่งหลังเข้าห้องทาง REST สำเร็จเหมือนเดิม)
+      const [, iceServers, socket] = await Promise.all([
+        joinRoom(roomId),
+        getIceServers(),
+        connectedSocket(),
+      ]);
       this.socket = socket;
 
       this.monitor = createLevelMonitor((levels) => store().setLevels(levels));

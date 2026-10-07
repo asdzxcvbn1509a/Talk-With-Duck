@@ -131,6 +131,24 @@ describe.skipIf(!hasTestDb)('Socket.IO (Signaling Server และข้อม�
     expect(ack).toMatchObject({ ok: false, code: 'NOT_A_MEMBER' });
   });
 
+  it('มีคนเข้าห้องทาง REST → คนในห้องได้รับ room:member-joined ของคนนั้น', async () => {
+    const { hostSocket, roomId } = await roomWithTwo();
+    await hostSocket.emitWithAck('room:join', { roomId });
+    const newcomer = await createUser({ nickname: 'เป็ดมาใหม่' });
+
+    const memberJoined = nextEvent(hostSocket, 'room:member-joined');
+    const res = await request(server)
+      .post(`/api/rooms/${roomId}/join`)
+      .set(bearer(newcomer.token))
+      .expect(200);
+    expect(res.body.room.memberCount).toBe(3);
+    expect(await memberJoined).toMatchObject({
+      userId: newcomer.user.id,
+      nickname: 'เป็ดมาใหม่',
+      isMuted: false,
+    });
+  });
+
   it('แชท ปิดไมค์ และออกจากห้อง กระจายถึงทุกคนในห้อง', async () => {
     const { hostSocket, guestSocket, roomId, guest } = await roomWithTwo();
     await hostSocket.emitWithAck('room:join', { roomId });

@@ -33,6 +33,15 @@ export const rmsLevel = (samples) => {
 export const SPEAKING_THRESHOLD = 0.035;
 
 /**
+ * ปัดความดังให้หยาบลงก่อนส่งให้หน้าเว็บ: เงียบ (ต่ำกว่าเกณฑ์) = 0 ที่เหลือปัดทีละ 0.02
+ * ค่าจึงไม่เปลี่ยนทุกรอบ หน้าเว็บไม่ต้อง render ใหม่ตอนทุกคนเงียบ
+ * (ค่าที่ปัดแล้วต่ำสุดคือ 0.04 ซึ่งยังเกินเกณฑ์ สถานะ "กำลังพูด" จึงเหมือนเดิม)
+ */
+export const quantizeLevel = (level) => {
+  return level < SPEAKING_THRESHOLD ? 0 : Math.round(level * 50) / 50;
+};
+
+/**
  * วัดความดังของหลาย stream พร้อมกัน แล้วเรียก onLevels({ key: level }) ราว 10 ครั้งต่อวินาที
  */
 export const createLevelMonitor = (onLevels) => {
@@ -46,7 +55,7 @@ export const createLevelMonitor = (onLevels) => {
       m.analyser.getByteTimeDomainData(m.data);
       const level = rmsLevel(m.data);
       m.smooth = m.smooth * 0.6 + level * 0.4;
-      levels[key] = m.smooth;
+      levels[key] = quantizeLevel(m.smooth);
     }
     onLevels(levels);
   };

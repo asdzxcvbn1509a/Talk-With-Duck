@@ -150,6 +150,78 @@ describe.skipIf(!hasTestDb)('ระบบแจ้งรายงานและ
     expect(pending.body.reports).toHaveLength(0);
   });
 
+  it('ผู้ดูแลเห็นรายงานครบทุกประเภทพร้อมเจ้าของตัวจริง รวมถึงรายการที่ถูกลบไปแล้ว', async () => {
+    const author = await createUser();
+    const helper = await createUser();
+    const troll = await createUser();
+    const reporter = await createUser();
+    const second = await createUser();
+    const mod = await createUser({ role: 'moderator' });
+
+    const q = await api().post('/api/questions').set(bearer(author.token)).send(question);
+    const questionId = q.body.question.id;
+    const answer = await api()
+      .post(`/api/questions/${questionId}/answers`)
+      .set(bearer(helper.token))
+      .send({ content: 'ลองคุยกับรุ่นพี่ดูนะ' });
+    const gone = await api()
+      .post('/api/questions')
+      .set(bearer(author.token))
+      .send({ ...question, title: 'กระทู้ที่จะถูกลบ' });
+    const room = await api()
+      .post('/api/rooms')
+      .set(bearer(troll.token))
+      .send({ name: 'ห้องของเป็ดเกเร', type: 'group' });
+    const roomId = room.body.room.id;
+    const message = await api()
+      .post(`/api/rooms/${roomId}/messages`)
+      .set(bearer(troll.token))
+      .send({ type: 'text', content: 'ข้อความไม่ดี' });
+
+    // ประเภท → [id ของสิ่งที่ถูกรายงาน, เจ้าของตัวจริง]
+    const targets = {
+      question: [questionId, author],
+      answer: [answer.body.answer.id, helper],
+      message: [message.body.message.id, troll],
+      user: [troll.user.id, troll],
+      room: [roomId, troll],
+    };
+    const report = (who, targetType, targetId) =>
+      api()
+        .post('/api/reports')
+        .set(bearer(who.token))
+        .send({ targetType, targetId, reason: 'spam' })
+        .expect(201);
+    for (const [targetType, [targetId]] of Object.entries(targets)) {
+      await report(reporter, targetType, targetId);
+    }
+    await report(second, 'user', troll.user.id);
+    await report(reporter, 'question', gone.body.question.id);
+    await api()
+      .delete(`/api/questions/${gone.body.question.id}`)
+      .set(bearer(author.token))
+      .expect(204);
+
+    const { body } = await api().get('/api/admin/reports').set(bearer(mod.token)).expect(200);
+    expect(body.reports).toHaveLength(7);
+    const find = (targetType, targetId, who = reporter) =>
+      body.reports.find(
+        (r) =>
+          r.targetType === targetType && r.targetId === targetId && r.reporter.id === who.user.id,
+      );
+    for (const [targetType, [targetId, owner]] of Object.entries(targets)) {
+      const found = find(targetType, targetId);
+      expect(found.target.exists).toBe(true);
+      expect(found.owner.id).toBe(owner.user.id);
+    }
+    expect(find('room', roomId).target.name).toBe('ห้องของเป็ดเกเร');
+    expect(find('user', troll.user.id).sameTargetCount).toBe(2);
+    expect(find('user', troll.user.id, second).sameTargetCount).toBe(2);
+    const deleted = find('question', gone.body.question.id);
+    expect(deleted.target).toEqual({ exists: false });
+    expect(deleted.owner).toBeNull();
+  });
+
   it('ระงับบัญชีแล้วผู้ใช้นั้นใช้งานไม่ได้อีก', async () => {
     const troll = await createUser();
     const reporter = await createUser();
