@@ -1,7 +1,48 @@
-// สถิติตามตัวชี้วัดความสำเร็จของโครงการ (ข้อ 4.6) สำหรับทีมใช้เขียนรายงานสรุป
+// งานของผู้ดูแลคอมมูนิตี้ (/api/admin): ระงับ/ปลดระงับบัญชี และสถิติตามตัวชี้วัดของโครงการ (ข้อ 4.6)
+// ส่วนการตรวจรายงานอยู่ใน report.service.js (ตรวจแล้วเลือก "ระงับบัญชี" จะเรียก banUser ในไฟล์นี้)
+import { prisma } from '../lib/prisma.js';
+import { disconnectUser, emitToUser } from '../realtime/hub.js';
+import { publicUser, publicUserSelect } from '../utils/present.js';
+import { badRequest, notFound } from '../utils/httpError.js';
+import { isModerator } from '../utils/roles.js';
+import { leaveAllRooms } from './room.service.js';
+import { revokeAllForUser } from './token.service.js';
+
+// ---------- ระงับ/ปลดระงับบัญชี ----------
+
+/** ระงับบัญชี: เพิกถอนทุก session พาออกจากทุกห้อง แล้วตัดการเชื่อมต่อทุกแท็บ */
+export const banUser = async (userId) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้');
+  if (isModerator(user)) throw badRequest('CANNOT_BAN_MODERATOR', 'ระงับบัญชีผู้ดูแลไม่ได้');
+
+  await prisma.user.update({ where: { id: userId }, data: { isBanned: true } });
+  await revokeAllForUser(userId);
+  await leaveAllRooms(userId);
+  emitToUser(userId, 'auth:banned', {});
+  disconnectUser(userId);
+};
+
+export const listBannedUsers = async () => {
+  const users = await prisma.user.findMany({
+    where: { isBanned: true },
+    select: publicUserSelect,
+    orderBy: { nickname: 'asc' },
+    take: 200,
+  });
+  return users.map(publicUser);
+};
+
+// ปลดระงับ: session ถูกเพิกถอนไปตอนระงับแล้ว ผู้ใช้ต้องเข้าสู่ระบบใหม่ · เนื้อหาที่ถูกซ่อนยังซ่อนอยู่
+export const unbanUser = async (userId) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้');
+  await prisma.user.update({ where: { id: userId }, data: { isBanned: false } });
+};
+
+// ---------- สถิติตามตัวชี้วัด (ข้อ 4.6) สำหรับทีมใช้เขียนรายงานสรุป ----------
 // เลือกช่วงเวลาได้ (from รวมเวลานั้น ส่วน to ไม่รวม) เช่น เฉพาะช่วง Duck Community Week
 // จะได้ไม่นับห้องและคำถามที่ทีมสร้างตอนทดสอบระบบก่อนเปิดใช้จริง
-import { prisma } from '../lib/prisma.js';
 
 /** เงื่อนไขช่วงเวลาของ Prisma · ไม่ได้เลือกช่วง = undefined (Prisma ไม่กรอง) */
 const between = (from, to) => {

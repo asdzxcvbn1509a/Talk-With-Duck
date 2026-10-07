@@ -1,3 +1,5 @@
+// จำกัดความถี่การเรียก API กันการยิงรัว ๆ (ปิดตอนรันเทสต์)
+// byUser: นับต่อบัญชีเมื่อล็อกอินแล้ว คนที่ใช้เน็ตมหาวิทยาลัย (IP เดียวกัน) จึงไม่โดนจำกัดรวมกัน
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { env } from '../config/env.js';
 

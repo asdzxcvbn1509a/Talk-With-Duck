@@ -1,3 +1,4 @@
+// รายชื่อผู้ร่วมห้องแบบช่องอวาตาร์ ใช้ทั้งห้องคุยและห้องคาราโอเกะ (compact = แถวเล็กใต้ตัวเล่นเพลง)
 import { useAuthStore } from '../../stores/authStore';
 import { useRoomStore } from '../../stores/roomStore';
 import { useUiStore } from '../../stores/uiStore';

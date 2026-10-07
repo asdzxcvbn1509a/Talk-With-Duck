@@ -1,8 +1,10 @@
+// ข้อมูลของผู้ใช้เอง (/api/me): แก้โปรไฟล์ ยอมรับข้อตกลง และลบบัญชีถาวร
 import { prisma } from '../lib/prisma.js';
 import { disconnectUser } from '../realtime/hub.js';
 import { badRequest } from '../utils/httpError.js';
+import { isModerator } from '../utils/roles.js';
 import { removeSong } from './queue.service.js';
-import { leaveRoom } from './room.service.js';
+import { leaveAllRooms } from './room.service.js';
 
 export const updateProfile = (userId, data) => {
   return prisma.user.update({ where: { id: userId }, data });
@@ -20,7 +22,7 @@ export const acceptGuidelines = (userId) => {
  */
 export const deleteAccount = async (user) => {
   // กันลบบัญชีผู้ดูแลคนสุดท้ายโดยไม่ตั้งใจ (ตั้งผู้ดูแลได้จากฐานข้อมูลเท่านั้น)
-  if (user.role === 'moderator') {
+  if (isModerator(user)) {
     throw badRequest(
       'MODERATOR_CANNOT_DELETE',
       'บัญชีผู้ดูแลลบเองไม่ได้ ให้ทีมเปลี่ยนสิทธิ์เป็นสมาชิกก่อนนะ',
@@ -28,11 +30,7 @@ export const deleteAccount = async (user) => {
   }
 
   // ออกจากห้องที่อยู่ตามปกติ: ย้ายเจ้าของห้องให้คนต่อไป หรือปิดห้องถ้าไม่เหลือใคร
-  const memberships = await prisma.roomMember.findMany({
-    where: { userId: user.id, leftAt: null },
-    select: { roomId: true },
-  });
-  for (const { roomId } of memberships) await leaveRoom(roomId, user.id);
+  await leaveAllRooms(user.id);
 
   // เพลงที่จองค้างในห้องที่ยังเปิด: เอาออกจากคิวแบบเดียวกับกดลบเพลง (เพลงที่กำลังเล่นจะข้ามไปเพลงถัดไป)
   // ถ้าปล่อยให้แถวถูกลบตาม FK เฉย ๆ คนในห้องจะยังเห็นคิวเดิม

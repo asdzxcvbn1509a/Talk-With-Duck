@@ -1,7 +1,7 @@
 // axios ที่แนบ Access Token ให้อัตโนมัติ และขอ token ใหม่เมื่อหมดอายุ (ยิงครั้งเดียวแม้หลาย request รอ)
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
-import { useUiStore } from '../stores/uiStore';
+import { toast, useUiStore } from '../stores/uiStore';
 
 export const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -128,5 +128,8 @@ export const errorMessage = (err, fallback = 'เกิดข้อผิดพ�
   if (err && !err.response) return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';
   return fallback;
 };
+
+/** แจ้งว่าทำรายการไม่สำเร็จด้วย toast สีแดง (ใช้ใน catch: ข้อความภาษาไทยจาก server หรือข้อความสำรอง) */
+export const toastError = (err) => toast(errorMessage(err), 'error');
 
 export const errorCode = (err) => err?.response?.data?.error?.code;

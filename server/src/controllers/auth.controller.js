@@ -1,3 +1,5 @@
+// รับคำขอ /api/auth: เข้าสู่ระบบด้วย Google, ต่ออายุ/ออกจากระบบ และบัญชีทดสอบตอนพัฒนา
+// Refresh Token ส่งเป็น httpOnly cookie ส่วน Access Token ส่งใน body (หน้าเว็บเก็บไว้ในหน่วยความจำ)
 import * as authService from '../services/auth.service.js';
 import { revokeByRawToken, rotateSession } from '../services/token.service.js';
 import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from '../utils/cookies.js';

@@ -4,6 +4,7 @@ import { CloudOff, RotateCw, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { buttonClass } from './buttonClass';
 import DuckAvatar from './DuckAvatar';
+import { TONE_CLASS } from './toneClass';
 
 // ชื่อแท็บของหน้า: React 19 ย้าย <title> ไปไว้ใน <head> และใช้แทนชื่อใน index.html จนกว่าจะออกจากหน้านี้
 // ใส่แค่ชื่อหน้า ไม่ใส่ชื่อห้องหรือหัวข้อคำถาม เพราะชื่อแท็บถูกเก็บในประวัติของเบราว์เซอร์ (คอมห้องแล็บใช้ร่วมกัน)
@@ -111,17 +112,11 @@ export const Segmented = ({ options, value, onChange, label, fit = false, classN
   );
 };
 
+// tone: duck | calm | beak | love | muted | danger (สีอยู่ใน toneClass.js)
 export const Badge = ({ tone = 'duck', className = '', children }) => {
-  const tones = {
-    duck: 'bg-duck-100 text-duck-800 dark:bg-duck-700/30 dark:text-duck-200',
-    calm: 'bg-calm-100 text-calm-700 dark:bg-calm-700/30 dark:text-calm-200',
-    beak: 'bg-beak-300/30 text-beak-700 dark:text-beak-300',
-    muted: 'bg-surface-2 text-muted',
-    danger: 'bg-danger-soft text-danger',
-  };
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${tones[tone]} ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${TONE_CLASS[tone]} ${className}`}
     >
       {children}
     </span>
@@ -197,6 +192,29 @@ export const LoadError = ({ title, message, onRetry }) => {
     >
       {message}
     </EmptyState>
+  );
+};
+
+// กล่องแจ้ง error ในหน้า (เช่น เข้าสู่ระบบไม่สำเร็จ) role="alert" ให้โปรแกรมอ่านหน้าจออ่านทันทีที่ขึ้น
+export const ErrorAlert = ({ className = '', children }) => {
+  return (
+    <p
+      className={`rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger ${className}`}
+      role="alert"
+    >
+      {children}
+    </p>
+  );
+};
+
+// ลิงก์ออกนอกเว็บ: เปิดแท็บใหม่ ผู้ใช้จะได้ไม่หลุดจากบ่อเป็ด และบอกโปรแกรมอ่านหน้าจอว่าจะเปิดแท็บใหม่
+// (ไม่ตั้งชื่อว่า ExternalLink เพราะซ้ำกับชื่อไอคอนของ lucide-react ที่หลายหน้าใช้อยู่)
+export const NewTabLink = ({ href, className = '', children }) => {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {children}
+      <span className="sr-only"> (เปิดในแท็บใหม่)</span>
+    </a>
   );
 };
 

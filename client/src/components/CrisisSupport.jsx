@@ -2,6 +2,7 @@
 // เบอร์และช่องทางทั้งหมดอยู่ใน config/helpLines.js · id ใช้ลิงก์ตรงมาที่กล่องนี้ เช่น /guidelines#help
 import { HeartHandshake, School } from 'lucide-react';
 import { HOTLINES, KMUTT_COUNSELING } from '../config/helpLines';
+import { NewTabLink } from './ui';
 
 const LINK_CLASS = 'text-calm-700 underline dark:text-calm-200';
 const ICON_CLASS = 'mt-0.5 shrink-0 text-calm-700 dark:text-calm-300';
@@ -41,19 +42,18 @@ const CrisisSupport = ({ compact = false, id }) => {
         {KMUTT_COUNSELING.name} ปรึกษาได้ทั้งเรื่องเรียน เพื่อน ครอบครัว และความเครียด
       </p>
       <ul className="mt-2 space-y-1.5">
-        {KMUTT_COUNSELING.contacts.map((contact) => (
-          <li key={contact.key} className="flex items-start gap-2">
-            <contact.icon size={18} className={ICON_CLASS} />
-            <a
-              href={contact.href}
-              className={`break-all ${LINK_CLASS}`}
-              {...(contact.external && { target: '_blank', rel: 'noopener noreferrer' })}
-            >
-              {contact.label}
-              {contact.external && <span className="sr-only"> (เปิดในแท็บใหม่)</span>}
-            </a>
-          </li>
-        ))}
+        {KMUTT_COUNSELING.contacts.map((contact) => {
+          // Facebook เปิดแท็บใหม่ ส่วนโทร/อีเมลเปิดแอปของเครื่องในหน้าเดิม
+          const ContactLink = contact.external ? NewTabLink : 'a';
+          return (
+            <li key={contact.key} className="flex items-start gap-2">
+              <contact.icon size={18} className={ICON_CLASS} />
+              <ContactLink href={contact.href} className={`break-all ${LINK_CLASS}`}>
+                {contact.label}
+              </ContactLink>
+            </li>
+          );
+        })}
       </ul>
     </aside>
   );

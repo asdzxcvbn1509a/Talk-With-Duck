@@ -1,3 +1,4 @@
+// รับคำขอ /api/rooms: ห้องสนทนา (room.service) ข้อความแชท (message.service) และคิวเพลง (queue.service)
 import * as roomService from '../services/room.service.js';
 import * as messageService from '../services/message.service.js';
 import * as queueService from '../services/queue.service.js';

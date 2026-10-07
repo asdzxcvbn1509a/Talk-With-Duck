@@ -2,10 +2,9 @@
 import { ListMusic, Play, X } from 'lucide-react';
 import { useState } from 'react';
 import { removeSong } from '../../api/rooms';
-import { errorMessage } from '../../lib/api';
+import { toastError } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import { useRoomStore } from '../../stores/roomStore';
-import { toast } from '../../stores/uiStore';
 import DuckAvatar from '../DuckAvatar';
 import { IconButton } from '../ui';
 
@@ -19,7 +18,7 @@ const SongQueue = ({ roomId, isHost }) => {
     try {
       await removeSong(roomId, song.id);
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setRemoving(null);
     }

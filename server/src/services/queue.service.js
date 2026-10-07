@@ -3,11 +3,11 @@ import { LIMITS } from '../config/constants.js';
 import { prisma } from '../lib/prisma.js';
 import { clearKaraokeState } from '../realtime/karaokeState.js';
 import { emitToRoom } from '../realtime/hub.js';
-import { presentSong } from '../utils/present.js';
+import { presentSong, publicUserSelect } from '../utils/present.js';
 import { badRequest, forbidden, notFound, tooMany } from '../utils/httpError.js';
-import { assertActiveMember, broadcastRoomSummary } from './room.service.js';
+import { assertActiveMember, broadcastRoomSummary, roomClosed } from './room.service.js';
 
-const include = { requester: { select: { id: true, nickname: true, avatar: true, year: true } } };
+const include = { requester: { select: publicUserSelect } };
 
 export const listQueue = async (roomId) => {
   const songs = await prisma.songQueue.findMany({
@@ -31,7 +31,7 @@ const broadcastQueue = async (roomId) => {
 
 const getKaraokeRoom = async (roomId) => {
   const room = await prisma.room.findUnique({ where: { id: roomId } });
-  if (!room || !room.isActive) throw notFound('ROOM_CLOSED', 'ห้องนี้ปิดไปแล้ว');
+  if (!room || !room.isActive) throw roomClosed();
   if (room.type !== 'karaoke') throw badRequest('NOT_KARAOKE_ROOM', 'ห้องนี้ไม่ใช่ห้องคาราโอเกะ');
   return room;
 };

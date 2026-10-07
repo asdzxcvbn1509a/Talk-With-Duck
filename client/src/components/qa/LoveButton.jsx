@@ -3,8 +3,7 @@
 import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import { loveQuestion } from '../../api/questions';
-import { errorMessage } from '../../lib/api';
-import { toast } from '../../stores/uiStore';
+import { toastError } from '../../lib/api';
 
 const LoveButton = ({ question, onChange, compact = false }) => {
   const [pending, setPending] = useState(false);
@@ -26,7 +25,7 @@ const LoveButton = ({ question, onChange, compact = false }) => {
       onChange?.(question.id, { lovedByMe: data.loved, loveCount: data.loveCount });
     } catch (err) {
       onChange?.(question.id, previous);
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setPending(false);
     }

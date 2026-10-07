@@ -1,3 +1,4 @@
+// เส้นทาง /api/auth: เข้าสู่ระบบด้วย Google ต่ออายุ session และออกจากระบบ (ข้อ 3.5.4)
 import { Router } from 'express';
 import { env } from '../config/env.js';
 import * as auth from '../controllers/auth.controller.js';

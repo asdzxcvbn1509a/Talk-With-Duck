@@ -25,6 +25,10 @@ Base URL: `/api` · รูปแบบ JSON · ★ = เพิ่มจากต
 
 ยกเว้น `/auth/refresh` ที่อยู่ใน `lib/api.js` เพราะ interceptor ของ axios ต้องใช้
 
+**ฝั่ง server:** แต่ละ path มีไฟล์ของตัวเอง 1 คู่ คือ `server/src/routes/<ชื่อ>.routes.js` (กำหนด middleware) → `server/src/controllers/<ชื่อ>.controller.js`
+- เช่น `/rooms` → `room.routes.js` → `room.controller.js` · `/admin` → `admin.routes.js` → `admin.controller.js`
+- ตารางเต็มว่าแต่ละ path เรียก service ไหน อยู่ใน [architecture.md](architecture.md)
+
 ## Auth
 
 | Method | Path | สิทธิ์ | Body | ผลลัพธ์ |

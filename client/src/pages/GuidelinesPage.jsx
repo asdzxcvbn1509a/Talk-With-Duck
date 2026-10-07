@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import CrisisSupport from '../components/CrisisSupport';
 import { Button, PageTitle } from '../components/ui';
-import { errorMessage } from '../lib/api';
+import { toastError } from '../lib/api';
 import { acceptGuidelines } from '../lib/auth';
 import { useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/uiStore';
@@ -81,7 +81,7 @@ const GuidelinesPage = () => {
       toast('ขอบคุณที่ช่วยกันดูแลบ่อเป็ดของเรา', 'success');
       navigate(location.state?.from ?? '/lobby', { replace: true });
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setLoading(false);
     }

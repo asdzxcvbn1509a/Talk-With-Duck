@@ -8,7 +8,7 @@
 import { Play, Radio, SkipForward, Volume2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { nextSong } from '../../api/rooms';
-import { errorMessage } from '../../lib/api';
+import { toastError } from '../../lib/api';
 import { expectedPosition, needsSeek, songOver } from '../../lib/karaokeSync';
 import { roomSession } from '../../lib/roomSession';
 import { PLAYER_STATE, UNPLAYABLE_ERRORS, loadYouTubeApi } from '../../lib/youtube';
@@ -75,7 +75,7 @@ const KaraokePlayer = ({ roomId, isHost }) => {
         // เปลี่ยนเพลงไม่สำเร็จ (เช่น เน็ตสะดุด): ปลดล็อกให้ลองใหม่ได้ ทั้งกดข้ามอีกครั้ง
         // และรอบตรวจของ host ที่จะขึ้นเพลงถัดไปให้เองทุก 4 วินาที ไม่งั้นห้องค้างอยู่ที่เพลงที่จบแล้ว
         if (advancing.current === song.id) advancing.current = null;
-        toast(errorMessage(err), 'error');
+        toastError(err);
       }
     },
     [roomId],

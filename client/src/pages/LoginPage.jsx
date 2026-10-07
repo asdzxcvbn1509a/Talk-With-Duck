@@ -6,7 +6,7 @@ import AuthShell from '../components/AuthShell';
 import DevAccounts from '../components/DevAccounts';
 import GoogleSignInButton from '../components/GoogleSignInButton';
 import ProfileSetupForm from '../components/ProfileSetupForm';
-import { PageTitle, Spinner } from '../components/ui';
+import { ErrorAlert, NewTabLink, PageTitle, Spinner } from '../components/ui';
 import { contactUrl } from '../config/links';
 import { errorCode, errorMessage } from '../lib/api';
 import { signInWithGoogle } from '../lib/auth';
@@ -105,10 +105,9 @@ const LoginPage = () => {
         subtitle="ตั้งชื่อเล่นกับเลือกน้องเป็ดก่อนเริ่ม ไม่ต้องใช้ชื่อจริง"
         footer={
           // เปิดแท็บใหม่: ถ้าออกจากหน้านี้ ข้อมูลจาก Google ที่รอตั้งโปรไฟล์จะหาย ต้องกดปุ่ม Google ใหม่
-          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="link">
+          <NewTabLink href="/privacy" className="link">
             ระบบเก็บข้อมูลอะไรบ้าง
-            <span className="sr-only"> (เปิดในแท็บใหม่)</span>
-          </a>
+          </NewTabLink>
         }
       >
         <PageTitle title="ตั้งโปรไฟล์" />
@@ -143,10 +142,9 @@ const LoginPage = () => {
           {contactUrl() && (
             <span className="mt-2 block">
               มีปัญหาในการเข้าสู่ระบบ?{' '}
-              <a href={contactUrl()} target="_blank" rel="noopener noreferrer" className="link">
+              <NewTabLink href={contactUrl()} className="link">
                 ติดต่อทีมผู้ดูแล
-                <span className="sr-only"> (เปิดในแท็บใหม่)</span>
-              </a>
+              </NewTabLink>
             </span>
           )}
         </>
@@ -159,11 +157,7 @@ const LoginPage = () => {
           <Spinner size={16} /> กำลังเข้าสู่ระบบ…
         </p>
       )}
-      {error && (
-        <p className="mt-4 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert className="mt-4">{error}</ErrorAlert>}
       <FeatureList />
       {import.meta.env.DEV && <DevAccounts onSignedIn={enter} />}
     </AuthShell>

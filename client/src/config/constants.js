@@ -16,6 +16,7 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
+import { TONE_CLASS } from '../components/toneClass';
 
 // อวาตาร์เป็ด: สีตัว + ของตกแต่ง (วาดด้วย SVG ใน components/DuckAvatar.jsx)
 export const AVATARS = [
@@ -31,25 +32,17 @@ export const AVATARS = [
 
 export const ANONYMOUS_AVATAR = 'duck-anon';
 
-// สีพื้น/สีไอคอนของสติกเกอร์ (ใช้ร่วมกับ StickerBadge ใน ChatPanel)
-const STICKER_TONES = {
-  duck: 'bg-duck-100 text-duck-800 dark:bg-duck-700/30 dark:text-duck-200',
-  beak: 'bg-beak-300/30 text-beak-700 dark:text-beak-300',
-  calm: 'bg-calm-100 text-calm-700 dark:bg-calm-700/30 dark:text-calm-200',
-  // สีหัวใจเป็น token (index.css) โหมดมืดเปลี่ยนสีให้เอง
-  love: 'bg-love-soft text-love',
-};
-
 // key ต้องตรงกับ STICKER_KEYS ของ server (เก็บลงฐานข้อมูล) ส่วนไอคอน/label เปลี่ยนได้
+// tone = สีพื้น/สีไอคอนของสติกเกอร์ในแชท (ชุดเดียวกับป้าย Badge ใน components/toneClass.js)
 export const STICKERS = [
-  { key: 'clap', icon: ThumbsUp, label: 'เยี่ยม', tone: STICKER_TONES.duck },
-  { key: 'heart', icon: Heart, label: 'ส่งใจ', tone: STICKER_TONES.love },
-  { key: 'laugh', icon: FaceGrinning, label: 'ขำ', tone: STICKER_TONES.duck },
-  { key: 'cry', icon: FaceSlightlyFrowning, label: 'ซึ้ง', tone: STICKER_TONES.calm },
-  { key: 'fire', icon: Flame, label: 'ไฟลุก', tone: STICKER_TONES.beak },
-  { key: 'hug', icon: HeartHandshake, label: 'กอด', tone: STICKER_TONES.love },
-  { key: 'mic', icon: MicVocal, label: 'ร้องต่อ!', tone: STICKER_TONES.calm },
-  { key: 'star', icon: Star, label: 'สุดยอด', tone: STICKER_TONES.beak },
+  { key: 'clap', icon: ThumbsUp, label: 'เยี่ยม', tone: TONE_CLASS.duck },
+  { key: 'heart', icon: Heart, label: 'ส่งใจ', tone: TONE_CLASS.love },
+  { key: 'laugh', icon: FaceGrinning, label: 'ขำ', tone: TONE_CLASS.duck },
+  { key: 'cry', icon: FaceSlightlyFrowning, label: 'ซึ้ง', tone: TONE_CLASS.calm },
+  { key: 'fire', icon: Flame, label: 'ไฟลุก', tone: TONE_CLASS.beak },
+  { key: 'hug', icon: HeartHandshake, label: 'กอด', tone: TONE_CLASS.love },
+  { key: 'mic', icon: MicVocal, label: 'ร้องต่อ!', tone: TONE_CLASS.calm },
+  { key: 'star', icon: Star, label: 'สุดยอด', tone: TONE_CLASS.beak },
 ];
 
 export const YEARS = [1, 2, 3, 4];
@@ -91,4 +84,6 @@ export const LIMITS = {
   messageMax: 500,
   questionTitleMax: 120,
   postContentMax: 2000,
+  reportDetailsMax: 500,
+  searchMax: 100,
 };

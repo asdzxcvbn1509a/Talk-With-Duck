@@ -14,10 +14,11 @@ import {
   Segmented,
   SkeletonGroup,
 } from '../components/ui';
+import { LIMITS } from '../config/constants';
 import { listQuestions } from '../api/questions';
 import { useApiQuery } from '../hooks/useApiQuery';
-import { errorMessage } from '../lib/api';
-import { toast, useUiStore } from '../stores/uiStore';
+import { errorMessage, toastError } from '../lib/api';
+import { useUiStore } from '../stores/uiStore';
 
 const SORTS = [
   { value: 'latest', label: 'ล่าสุด' },
@@ -87,7 +88,7 @@ const QABoardPage = () => {
       const { data: page } = await listQuestions({ ...params, cursor: nextCursor });
       setData((prev) => ({ items: [...prev.items, ...page.items], nextCursor: page.nextCursor }));
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setLoadingMore(false);
     }
@@ -127,7 +128,7 @@ const QABoardPage = () => {
             className="input pr-12 pl-11"
             inputMode="search"
             enterKeyHint="search"
-            maxLength={100}
+            maxLength={LIMITS.searchMax}
             placeholder="ค้นหาคำถาม เช่น ฝึกงาน"
             aria-label="ค้นหาคำถาม"
             value={text}

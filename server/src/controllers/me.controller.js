@@ -1,3 +1,4 @@
+// รับคำขอ /api/me: ข้อมูลของผู้ใช้ที่ล็อกอินอยู่ แก้โปรไฟล์ ยอมรับข้อตกลง และลบบัญชี
 import * as userService from '../services/user.service.js';
 import { clearRefreshCookie } from '../utils/cookies.js';
 import { selfUser } from '../utils/present.js';

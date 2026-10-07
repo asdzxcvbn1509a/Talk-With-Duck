@@ -1,3 +1,4 @@
+// หน้า "ฉัน": แก้โปรไฟล์ เลือกโหมดสี ลิงก์ข้อตกลง/ช่วยเหลือ/นโยบาย ออกจากระบบ และลบบัญชี
 import {
   ClipboardCheck,
   ExternalLink,
@@ -17,14 +18,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import DuckAvatar from '../components/DuckAvatar';
 import { AvatarPicker, YearPicker } from '../components/ProfilePickers';
-import { Badge, Button, Field, PageTitle, Segmented } from '../components/ui';
+import { Badge, Button, Field, NewTabLink, PageTitle, Segmented } from '../components/ui';
 import { LIMITS } from '../config/constants';
 import { contactUrl, surveyUrl } from '../config/links';
-import { errorMessage } from '../lib/api';
+import { toastError } from '../lib/api';
 import { deleteAccount, logout, updateProfile } from '../lib/auth';
 import { confirmDialog } from '../lib/dialog';
 import { roomSession } from '../lib/roomSession';
-import { useAuthStore } from '../stores/authStore';
+import { selectIsModerator, useAuthStore } from '../stores/authStore';
 import { toast, useUiStore } from '../stores/uiStore';
 
 const THEME_OPTIONS = [
@@ -35,19 +36,19 @@ const THEME_OPTIONS = [
 
 const MENU_ROW_CLASS = 'flex items-center gap-3 px-6 py-4 hover:bg-surface-2';
 
-// ลิงก์ออกนอกเว็บ (แบบประเมิน/ช่องทางติดต่อ): เปิดแท็บใหม่ และบอกผู้ใช้ด้วยไอคอนกับข้อความสำหรับโปรแกรมอ่านหน้าจอ
+// ลิงก์ออกนอกเว็บ (แบบประเมิน/ช่องทางติดต่อ): เปิดแท็บใหม่ และมีไอคอนบอกท้ายแถว
 const ExternalRow = ({ href, icon: IconComponent, children }) => {
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={MENU_ROW_CLASS}>
+    <NewTabLink href={href} className={MENU_ROW_CLASS}>
       <IconComponent size={20} /> {children}
-      <span className="sr-only"> (เปิดในแท็บใหม่)</span>
       <ExternalLink size={16} className="ml-auto shrink-0 text-muted" aria-hidden="true" />
-    </a>
+    </NewTabLink>
   );
 };
 
 const MePage = () => {
   const user = useAuthStore((s) => s.user);
+  const isModerator = useAuthStore(selectIsModerator);
   const theme = useUiStore((s) => s.theme);
   const setTheme = useUiStore((s) => s.setTheme);
   const pendingReports = useUiStore((s) => s.reportSummary.pending);
@@ -69,7 +70,7 @@ const MePage = () => {
       await updateProfile({ ...form, nickname: form.nickname.trim() });
       toast('บันทึกโปรไฟล์แล้ว', 'success');
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setSaving(false);
     }
@@ -105,7 +106,7 @@ const MePage = () => {
       toast('ลบบัญชีแล้ว ขอบคุณที่เคยแวะมาที่บ่อเป็ดนะ', 'success');
       navigate('/login', { replace: true });
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
       setDeleting(false);
     }
   };
@@ -181,7 +182,7 @@ const MePage = () => {
             ติดต่อทีมผู้ดูแล
           </ExternalRow>
         )}
-        {user.role === 'moderator' && (
+        {isModerator && (
           <Link to="/admin/reports" className={MENU_ROW_CLASS}>
             <Flag size={20} /> จัดการรายงาน (ผู้ดูแล)
             {pendingReports > 0 && (
@@ -204,7 +205,7 @@ const MePage = () => {
         <h2 id="delete-account" className="text-lg font-medium">
           ลบบัญชี
         </h2>
-        {user.role === 'moderator' ? (
+        {isModerator ? (
           <p className="text-sm text-muted">
             บัญชีผู้ดูแลลบเองไม่ได้ ถ้าจะเลิกเป็นผู้ดูแล ให้ทีมเปลี่ยนสิทธิ์เป็นสมาชิกก่อน
           </p>

@@ -29,6 +29,8 @@ export const LIMITS = {
   questionTitleMax: 120,
   postContentMax: 2000,
   reportDetailsMax: 500,
+  // คำค้น (คำถามในบอร์ดและชื่อเพลง)
+  searchMax: 100,
   queuePerUser: 5,
 };
 

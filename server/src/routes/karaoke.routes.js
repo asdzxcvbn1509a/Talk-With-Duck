@@ -1,3 +1,4 @@
+// เส้นทาง /api/karaoke: ค้นหาเพลงจาก YouTube และแปลงลิงก์ที่วางเป็นข้อมูลเพลง (ข้อ 3.5.6)
 import { Router } from 'express';
 import * as karaoke from '../controllers/karaoke.controller.js';
 import { requireAuth, requireGuidelines } from '../middleware/auth.js';

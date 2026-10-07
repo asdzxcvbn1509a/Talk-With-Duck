@@ -17,3 +17,6 @@ const adapter = new PrismaPg({
 });
 
 export const prisma = new PrismaClient({ adapter });
+
+/** ฐานข้อมูลยังตอบอยู่ไหม (ใช้ใน /api/health?db) · ต่อไม่ได้จะ throw */
+export const pingDatabase = () => prisma.$queryRaw`SELECT 1`;

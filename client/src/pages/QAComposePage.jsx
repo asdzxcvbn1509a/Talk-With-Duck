@@ -1,10 +1,11 @@
+// ตั้งคำถามใหม่บนบอร์ด (ข้อ 3.5.7) · ฟอร์มใช้ร่วมกับการแก้ไขคำถาม (components/qa/QuestionForm.jsx)
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import QuestionForm from '../components/qa/QuestionForm';
 import { PageTitle } from '../components/ui';
 import { createQuestion } from '../api/questions';
-import { errorMessage } from '../lib/api';
+import { toastError } from '../lib/api';
 import { toast } from '../stores/uiStore';
 
 const QAComposePage = () => {
@@ -18,7 +19,7 @@ const QAComposePage = () => {
       toast('โพสต์คำถามแล้ว รอเพื่อน ๆ มาช่วยตอบนะ', 'success');
       navigate(`/qa/${data.question.id}`, { replace: true });
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setSubmitting(false);
     }

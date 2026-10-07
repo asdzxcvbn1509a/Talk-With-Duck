@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { AVATARS, LIMITS } from '../config/constants';
 import { AvatarPicker, YearPicker } from './ProfilePickers';
-import { Button, Field } from './ui';
+import { Button, ErrorAlert, Field } from './ui';
 
 const randomAvatar = () => AVATARS[Math.floor(Math.random() * AVATARS.length)].key;
 
@@ -51,11 +51,7 @@ const ProfileSetupForm = ({ email, loading, error, onSubmit, onCancel }) => {
         <span className="label">เลือกน้องเป็ดของคุณ</span>
         <AvatarPicker value={form.avatar} onChange={(avatar) => set({ avatar })} />
       </div>
-      {message && (
-        <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">
-          {message}
-        </p>
-      )}
+      {message && <ErrorAlert>{message}</ErrorAlert>}
       <Button type="submit" size="lg" className="w-full" loading={loading}>
         เริ่มใช้งาน
       </Button>

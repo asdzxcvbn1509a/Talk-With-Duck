@@ -1,6 +1,6 @@
 // ตัวกั้นเส้นทาง: ต้องล็อกอิน → ต้องยอมรับข้อตกลงการใช้งานก่อนใช้ครั้งแรก → (บางหน้า) ต้องเป็นผู้ดูแล
 import { Navigate, Outlet, useLocation } from 'react-router';
-import { useAuthStore } from '../stores/authStore';
+import { selectIsModerator, useAuthStore } from '../stores/authStore';
 import { Spinner } from './ui';
 
 export const FullPageLoader = ({ label = 'กำลังโหลด…' }) => {
@@ -34,8 +34,8 @@ export const RequireGuidelines = () => {
 };
 
 export const RequireModerator = () => {
-  const user = useAuthStore((s) => s.user);
-  if (user.role !== 'moderator') return <Navigate to="/lobby" replace />;
+  const isModerator = useAuthStore(selectIsModerator);
+  if (!isModerator) return <Navigate to="/lobby" replace />;
   return <Outlet />;
 };
 

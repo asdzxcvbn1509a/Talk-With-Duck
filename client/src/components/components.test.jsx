@@ -9,7 +9,7 @@ import LoveButton from './qa/LoveButton';
 import QuestionCard from './qa/QuestionCard';
 import { ReportButton } from './ReportModal';
 import RoomCard from './RoomCard';
-import { Modal, PageTitle, Segmented } from './ui';
+import { ErrorAlert, Modal, NewTabLink, PageTitle, Segmented } from './ui';
 
 vi.mock('../api/questions', () => ({ loveQuestion: vi.fn() }));
 
@@ -63,6 +63,35 @@ describe('CrisisSupport', () => {
       'href',
       'mailto:cps@kmutt.ac.th',
     );
+    // Facebook เป็นเว็บภายนอก: เปิดแท็บใหม่ ส่วนโทร/อีเมลเปิดในหน้าเดิม
+    expect(screen.getByRole('link', { name: /counsellingkmutt/ })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+    expect(screen.getByRole('link', { name: '1323' })).not.toHaveAttribute('target');
+  });
+});
+
+describe('NewTabLink และ ErrorAlert', () => {
+  it('ลิงก์ออกนอกเว็บเปิดแท็บใหม่ และบอกโปรแกรมอ่านหน้าจอว่าจะเปิดในแท็บใหม่', () => {
+    render(
+      <NewTabLink href="https://forms.gle/duck" className="link">
+        ตอบแบบประเมิน
+      </NewTabLink>,
+    );
+    // jsdom ต่อข้อความใน <span> โดยไม่เว้นวรรค (เบราว์เซอร์จริงอ่านว่า "ตอบแบบประเมิน (เปิดในแท็บใหม่)")
+    const link = screen.getByRole('link', { name: /^ตอบแบบประเมิน\s*\(เปิดในแท็บใหม่\)$/ });
+    expect(link).toHaveAttribute('href', 'https://forms.gle/duck');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(link).toHaveClass('link');
+  });
+
+  it('กล่อง error มี role="alert" ให้โปรแกรมอ่านหน้าจออ่านทันทีที่ขึ้น', () => {
+    render(<ErrorAlert className="mt-4">เข้าสู่ระบบไม่สำเร็จ</ErrorAlert>);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('เข้าสู่ระบบไม่สำเร็จ');
+    expect(alert).toHaveClass('mt-4');
   });
 });
 

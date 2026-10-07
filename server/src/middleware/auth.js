@@ -3,6 +3,7 @@ import { BANNED_MESSAGE, SESSION_EXPIRED_MESSAGE } from '../config/constants.js'
 import { verifyAccessToken } from '../lib/jwt.js';
 import { prisma } from '../lib/prisma.js';
 import { forbidden, unauthorized } from '../utils/httpError.js';
+import { isModerator } from '../utils/roles.js';
 
 export const loadUserFromToken = async (token) => {
   let payload;
@@ -41,6 +42,6 @@ export const requireGuidelines = (req, _res, next) => {
 };
 
 export const requireModerator = (req, _res, next) => {
-  if (req.user.role !== 'moderator') throw forbidden('MODERATOR_ONLY', 'เฉพาะผู้ดูแลคอมมูนิตี้');
+  if (!isModerator(req.user)) throw forbidden('MODERATOR_ONLY', 'เฉพาะผู้ดูแลคอมมูนิตี้');
   next();
 };

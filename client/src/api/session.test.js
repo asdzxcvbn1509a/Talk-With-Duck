@@ -1,9 +1,10 @@
-// การต่ออายุ session ด้วย refresh cookie (lib/api) ตาม docs/api.md แถว /auth/refresh
+// lib/api: การต่ออายุ session ด้วย refresh cookie ตาม docs/api.md แถว /auth/refresh และการแจ้ง error (toastError)
 // อยู่ในโฟลเดอร์ src/api เพราะเทสต์ interceptor ต้องใช้ api ตัวกลาง
 import axios, { AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api, refreshSession } from '../lib/api';
+import { api, refreshSession, toastError } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
+import { useUiStore } from '../stores/uiStore';
 
 const session = { user: { id: 'u1', nickname: 'เป็ดทดสอบ' }, accessToken: 'test-access-token' };
 
@@ -58,5 +59,20 @@ describe('ต่ออายุ session (refresh cookie)', () => {
     expect(adapter).toHaveBeenCalledTimes(1);
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(useAuthStore.getState().accessToken).toBeNull();
+  });
+});
+
+describe('toastError', () => {
+  afterEach(() => useUiStore.setState({ toasts: [] }));
+
+  it('แจ้งข้อความภาษาไทยจาก server ถ้ามี ไม่งั้นบอกว่าเชื่อมต่อไม่ได้ (toast สีแดง)', () => {
+    useUiStore.setState({ toasts: [] });
+    toastError({ response: { status: 409, data: { error: { message: 'ห้องเต็มแล้ว' } } } });
+    toastError(new Error('Network Error'));
+    const toasts = useUiStore.getState().toasts.map(({ message, tone }) => ({ message, tone }));
+    expect(toasts).toEqual([
+      { message: 'ห้องเต็มแล้ว', tone: 'error' },
+      { message: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่', tone: 'error' },
+    ]);
   });
 });

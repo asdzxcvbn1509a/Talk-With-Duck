@@ -1,10 +1,10 @@
 // แชทข้อความและสติกเกอร์ในห้อง: บันทึกลงฐานข้อมูลแล้วกระจายให้ทุกคนในห้องผ่าน Socket.IO
 import { prisma } from '../lib/prisma.js';
 import { emitToRoom } from '../realtime/hub.js';
-import { presentMessage } from '../utils/present.js';
+import { presentMessage, publicUserSelect } from '../utils/present.js';
 import { assertActiveMember } from './room.service.js';
 
-const include = { user: { select: { id: true, nickname: true, avatar: true, year: true } } };
+const include = { user: { select: publicUserSelect } };
 
 export const listMessages = async (roomId, userId, { before, limit = 50 } = {}) => {
   await assertActiveMember(roomId, userId);

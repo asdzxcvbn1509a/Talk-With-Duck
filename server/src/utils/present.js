@@ -9,6 +9,9 @@ export const ANONYMOUS_AUTHOR = Object.freeze({
   year: null,
 });
 
+/** ฟิลด์ที่ select จากฐานข้อมูลเพื่อส่งให้ publicUser: เลือกแค่นี้ อีเมลจึงไม่มีทางหลุดไปถึงผู้ใช้อื่น */
+export const publicUserSelect = { id: true, nickname: true, avatar: true, year: true };
+
 /** ข้อมูลสาธารณะของผู้ใช้ (ไม่มีอีเมล) */
 export const publicUser = (user) => {
   if (!user) return null;

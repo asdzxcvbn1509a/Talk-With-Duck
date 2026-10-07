@@ -65,5 +65,6 @@ export const useRoomLifecycle = (roomId, { backTo = '/lobby' } = {}) => {
     navigate(backTo);
   }, [navigate, backTo]);
 
-  return { status, preview, previewError, joining, joinError, join, leave };
+  // backTo: หน้าที่ปุ่ม "กลับไปเลือกห้อง" พาไป (ห้องคุย = /lobby, ห้องคาราโอเกะ = /karaoke)
+  return { status, preview, previewError, joining, joinError, join, leave, backTo };
 };

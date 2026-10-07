@@ -57,7 +57,7 @@ export const sendMessageBody = z.discriminatedUnion('type', [
 
 // ---------- Karaoke ----------
 export const searchQuery = z.object({
-  q: z.string().trim().min(1, 'พิมพ์ชื่อเพลงก่อนนะ').max(100),
+  q: z.string().trim().min(1, 'พิมพ์ชื่อเพลงก่อนนะ').max(LIMITS.searchMax),
 });
 export const resolveBody = z.object({ url: z.string().trim().min(1).max(300) });
 export const addSongBody = z.object({
@@ -75,7 +75,10 @@ export const listQuestionsQuery = z.object({
   topic: z.preprocess((v) => (v === '' || v === 'all' ? undefined : v), topic.optional()),
   sort: z.enum(['latest', 'popular', 'unanswered']).default('latest'),
   // ค้นหาจากหัวข้อและรายละเอียดของคำถาม
-  q: z.preprocess(blankToUndefined, z.string().trim().max(100, 'คำค้นยาวเกินไป').optional()),
+  q: z.preprocess(
+    blankToUndefined,
+    z.string().trim().max(LIMITS.searchMax, 'คำค้นยาวเกินไป').optional(),
+  ),
   cursor: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });

@@ -1,3 +1,4 @@
+// สุ่มและ hash ค่า Refresh Token (ฐานข้อมูลเก็บแค่ hash ถ้าข้อมูลรั่ว token จริงก็ยังไม่หลุด)
 import crypto from 'node:crypto';
 import { env } from '../config/env.js';
 

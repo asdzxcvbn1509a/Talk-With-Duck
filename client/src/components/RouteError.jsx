@@ -4,7 +4,7 @@ import { CloudOff, RotateCw, TriangleAlert } from 'lucide-react';
 import { Link, useRouteError } from 'react-router';
 import { contactUrl } from '../config/links';
 import { PageLoadError } from '../lib/lazyPage';
-import { Button, EmptyState, PageTitle } from './ui';
+import { Button, EmptyState, NewTabLink, PageTitle } from './ui';
 
 // บอกให้ติดต่อทีมเฉพาะเมื่อมีช่องทางจริง (VITE_CONTACT_URL) ไม่งั้นผู้ใช้จะหาไม่เจอว่าต้องแจ้งที่ไหน
 const ContactHint = () => {
@@ -14,10 +14,9 @@ const ContactHint = () => {
     <>
       {' '}
       ถ้ายังเจออยู่{' '}
-      <a href={url} target="_blank" rel="noopener noreferrer" className="link">
+      <NewTabLink href={url} className="link">
         ติดต่อทีมผู้ดูแล
-        <span className="sr-only"> (เปิดในแท็บใหม่)</span>
-      </a>
+      </NewTabLink>
     </>
   );
 };

@@ -1,3 +1,4 @@
+// รับคำขอ /api/karaoke: ค้นหาเพลง YouTube และแปลงลิงก์เป็นข้อมูลเพลง (คิวเพลงอยู่ที่ /api/rooms/:id/queue)
 import * as karaokeService from '../services/karaoke.service.js';
 
 export const config = (_req, res, next) => {

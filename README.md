@@ -111,6 +111,10 @@ seed มีคำถามตัวอย่างครบทุกหัวข
 
   - ไม่ต้องส่ง token เอง: `api` (axios จาก `lib/api.js`) แนบ token ให้และขอ token ใหม่เมื่อหมดอายุ
   - ถ้าต้องโหลดข้อมูลตอนเปิดหน้า ใช้ `useApiQuery(readQuestion, id)`
+- **ฝั่ง server แยกไฟล์ตาม path เหมือนกัน (1 path = 1 ไฟล์ routes + 1 ไฟล์ controller):**
+  - เช่น `/api/rooms` → `routes/room.routes.js` → `controllers/room.controller.js` คู่กับ `client/src/api/rooms.js`
+  - ส่วน service แยกตามเรื่อง (ห้อง แชท คิวเพลง คำถาม รายงาน ฯลฯ) controller หนึ่งตัวเรียกได้หลาย service
+  - จะเพิ่ม endpoint ใหม่ ทำตามหัวข้อ "วิธีเพิ่ม endpoint ใหม่" ใน [docs/architecture.md](docs/architecture.md)
 - **ไอคอนใช้ [lucide-react](https://lucide.dev) เท่านั้น ห้ามใช้ emoji:**
   - ค้นชื่อไอคอนที่ lucide.dev แล้ว import มาใช้ เช่น `import { Mic } from 'lucide-react'` แล้ววาง `<Mic size={20} />`
   - ปุ่มส่งไอคอนเป็น component เช่น `<Button icon={Plus}>`
@@ -139,6 +143,9 @@ seed มีคำถามตัวอย่างครบทุกหัวข
   - `Skeleton` / `SkeletonGroup` สำหรับโครงหน้าระหว่างโหลด
   - `LoadError` สำหรับหน้าโหลดไม่สำเร็จ ใช้คู่กับ `retry` จาก `useApiQuery`
   - `EmptyState` ส่ง `mascot` (เช่น `duck-headphones`) ได้ ให้น้องเป็ดเปลี่ยนท่าตามหน้า
+  - `ErrorAlert` กล่องแจ้ง error ในหน้า (มี `role="alert"` ให้โปรแกรมอ่านหน้าจออ่านทันที)
+  - `NewTabLink` ลิงก์ออกนอกเว็บ: ใส่ `target="_blank"`, `rel` และข้อความ "(เปิดในแท็บใหม่)" สำหรับโปรแกรมอ่านหน้าจอให้เอง
+  - สีของป้าย (`Badge`) และสติกเกอร์อยู่ใน `components/toneClass.js` ที่เดียว
 - **จัดการ error ด้วย `async/await` + `try/catch`** ไม่ใช้ `.then().catch()`
   - controller ฝั่ง server ครอบทุกตัว แล้วส่ง error ต่อด้วย `next(err)` ไปที่ `middleware/error.js` ซึ่งแปลงเป็นข้อความภาษาไทยให้เอง
 
@@ -152,6 +159,7 @@ seed มีคำถามตัวอย่างครบทุกหัวข
     };
     ```
 
+  - ฝั่งหน้าเว็บ ถ้าทำรายการไม่สำเร็จให้แจ้งด้วย `toastError(err)` จาก `lib/api.js` (แสดงข้อความภาษาไทยจาก server หรือบอกว่าเชื่อมต่อไม่ได้)
   - ถ้าตั้งใจไม่ทำอะไรใน `catch` ให้เขียนคอมเมนต์บอกเหตุผลไว้ (catch ว่างจะไม่ผ่าน lint)
 - **อ่านค่าจาก store (Zustand) ด้วย selector เสมอ** เช่น `useRoomStore((s) => s.members)` ไม่ใช่ `useRoomStore()` ทั้งก้อน เพราะ component จะ render ใหม่ทุกครั้งที่ค่าใดก็ได้ใน store เปลี่ยน (ระดับเสียงในห้องเปลี่ยนทุก 100 ms)
 - **ชื่อแท็บ:** ทุกหน้าใส่ `<PageTitle title="ชื่อหน้า" />` จาก `components/ui.jsx` (ทุก return ของหน้า)
@@ -194,22 +202,40 @@ seed มีคำถามตัวอย่างครบทุกหัวข
 
 ```
 client/src/
-  pages/        หน้าจอตามตาราง 3.4 (Lobby, Room, Karaoke, QA, Admin, …)
-  components/   DuckAvatar, RoomCard, room/*, karaoke/*, qa/*, ReportModal, ui.jsx
-  api/          ฟังก์ชันเรียก REST API แยกไฟล์ตาม path: auth, me, rooms, karaoke, questions, answers, reports, admin, rtc
-  hooks/        useApiQuery, useLobbyRooms, useRoomLifecycle, …
-  lib/          api (axios + refresh token), googleIdentity (โหลดปุ่ม Google), socket, roomSession (ไมค์ + WebRTC + Socket.IO), rtc/PeerMesh, dialog (หน้าต่างยืนยัน SweetAlert2)
-  stores/       authStore, roomStore, uiStore (Zustand)
+  pages/          หน้าจอตามตาราง 3.4 (Lobby, Room, Karaoke, QA, Admin, …) ดูแล state และการโหลดข้อมูลของหน้า
+  components/     ui.jsx (ปุ่ม ป้าย หน้าต่าง ฯลฯ), Layout, guards (ตัวกั้นเส้นทาง), DuckAvatar, RoomCard, ReportModal, …
+    admin/        ส่วนของหน้าผู้ดูแล: StatsPanel, BannedUsers, ReportCard
+    lobby/        ส่วนของหน้าหลัก: DailyActivityCard, LatestQuestions
+    qa/           บอร์ดคำถาม: QuestionCard, QuestionDetail, QuestionForm, AnswerItem, AnswerComposer, LoveButton
+    room/         ห้องคุย: RoomGate, PreJoin, ParticipantGrid, ChatPanel, ControlBar, MicButton, KickButton, …
+    karaoke/      KaraokePlayer, SongQueue, SongSearch
+  api/            ฟังก์ชันเรียก REST API แยกไฟล์ตาม path: auth, me, rooms, karaoke, questions, answers, reports, admin, rtc
+  hooks/          useApiQuery, useLobbyRooms, useRoomLifecycle, useLeaveRoomGuard, useModeratorAlerts, useUnread
+  lib/            api (axios + refresh token + errorMessage/toastError), socket, roomSession (ไมค์ + WebRTC + Socket.IO),
+                  rtc/ (PeerMesh, ระดับเสียง), auth, dialog (SweetAlert2), googleIdentity, theme, format, …
+  stores/         authStore, roomStore, uiStore (Zustand)
+  config/         ค่าคงที่ (ต้องตรงกับ server), กิจกรรมประจำวัน, ช่องทางขอความช่วยเหลือ, ลิงก์ภายนอก (VITE_*)
+  test/           setup ของ Vitest (jsdom)
 server/
-  prisma/       schema.prisma, migrations/, seed.js
-  src/routes → controllers → services   REST API
-  src/realtime/ Socket.IO: signaling, presence, karaoke sync
-  tests/        unit + integration (ใช้ฐานข้อมูล talkwithduck_test)
-docs/           api.md · socket-events.md · deploy.md · test-plan.md · report-changes.md
+  prisma/         schema.prisma, migrations/, seed.js
+  src/
+    routes/       1 ไฟล์ต่อ path (/auth, /me, /rooms, …) กำหนด middleware ของแต่ละ endpoint
+    controllers/  รับคำขอแล้วเรียก service (ครอบ try/catch แล้วส่ง error ต่อด้วย next)
+    services/     ตรรกะของระบบและการอ่าน/เขียนฐานข้อมูลด้วย Prisma
+    realtime/     Socket.IO: signaling, presence, ซิงก์คาราโอเกะ, hub (ให้ service ส่ง event)
+    middleware/   ตรวจสิทธิ์ (auth), ตรวจข้อมูลด้วย zod (validate), จำกัดความถี่ (rateLimit), แปลง error
+    lib/          Prisma client, JWT, ตรวจ ID token ของ Google, crypto
+    utils/        แปลงข้อมูลก่อนส่ง (present), HttpError, cookie, roles, …
+    config/       env (ตรวจค่าใน .env ตอนเริ่ม), ค่าคงที่
+    schemas.js    รูปแบบข้อมูลที่แต่ละ endpoint รับ (zod)
+  tests/          unit + integration (ใช้ฐานข้อมูล talkwithduck_test)
+docs/             architecture.md · database.md · api.md · socket-events.md · deploy.md · test-plan.md · report-changes.md
 ```
 
 ## เอกสารเพิ่มเติม
 
+- [docs/architecture.md](docs/architecture.md): ภาพรวมระบบ ชั้นของโค้ด ลำดับการเข้าสู่ระบบ ระบบเรียลไทม์ และวิธีเพิ่ม endpoint ใหม่
+- [docs/database.md](docs/database.md): แผนภาพ ER ความหมายของทุกตาราง และวิธีทำ migration
 - [docs/api.md](docs/api.md): REST API ทั้งหมด
 - [docs/socket-events.md](docs/socket-events.md): event ของ Socket.IO และลำดับการต่อ WebRTC
 - [docs/deploy.md](docs/deploy.md): ขั้นตอนนำขึ้น Supabase + Render + Vercel

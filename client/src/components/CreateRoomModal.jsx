@@ -1,3 +1,4 @@
+// หน้าต่างเปิดห้องใหม่: ตั้งชื่อ เลือกประเภทห้องและชั้นปี แล้วพาเข้าห้องทันที
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { LIMITS, ROOM_TYPES, YEARS } from '../config/constants';

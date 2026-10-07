@@ -1,85 +1,21 @@
-// รายละเอียดกระทู้: คำถาม + คำตอบทั้งหมด + ช่องพิมพ์ตอบ
-import { ArrowLeft, EyeOff, Pencil, SearchX, Send, Trash } from 'lucide-react';
+// รายละเอียดคำถาม: คำถาม + คำตอบทั้งหมด + ช่องพิมพ์ตอบ
+// ส่วนแสดงผลอยู่ใน components/qa/ (QuestionDetail, AnswerItem, AnswerComposer) หน้านี้ดูแลการโหลด แก้ไข และลบ
+import { ArrowLeft, SearchX, Trash } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import DuckAvatar from '../components/DuckAvatar';
+import AnswerComposer from '../components/qa/AnswerComposer';
 import AnswerItem from '../components/qa/AnswerItem';
-import LoveButton from '../components/qa/LoveButton';
+import QuestionDetail from '../components/qa/QuestionDetail';
 import QuestionForm from '../components/qa/QuestionForm';
-import { ReportButton } from '../components/ReportModal';
-import {
-  Badge,
-  Button,
-  EmptyState,
-  IconButton,
-  LoadError,
-  PageTitle,
-  Skeleton,
-  SkeletonGroup,
-  Toggle,
-} from '../components/ui';
-import { LIMITS, TOPICS } from '../config/constants';
-import { createAnswer, readQuestion, removeQuestion, updateQuestion } from '../api/questions';
+import { EmptyState, LoadError, PageTitle, Skeleton, SkeletonGroup } from '../components/ui';
+import { readQuestion, removeQuestion, updateQuestion } from '../api/questions';
 import { useApiQuery } from '../hooks/useApiQuery';
-import { errorCode, errorMessage } from '../lib/api';
+import { errorCode, errorMessage, toastError } from '../lib/api';
 import { confirmDialog } from '../lib/dialog';
-import { timeAgo, yearLabel } from '../lib/format';
-import { useAuthStore } from '../stores/authStore';
+import { selectIsModerator, useAuthStore } from '../stores/authStore';
 import { toast } from '../stores/uiStore';
 
-const AnswerComposer = ({ questionId, onCreated }) => {
-  const [content, setContent] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [sending, setSending] = useState(false);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setSending(true);
-    try {
-      const { data } = await createAnswer(questionId, { content: content.trim(), isAnonymous });
-      onCreated(data.answer);
-      setContent('');
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit} className="card space-y-3 p-4">
-      <label htmlFor="answer" className="label">
-        ช่วยตอบ / ส่งกำลังใจ
-      </label>
-      <textarea
-        id="answer"
-        className="input min-h-28"
-        maxLength={LIMITS.postContentMax}
-        placeholder="แชร์ประสบการณ์ ให้คำแนะนำ หรือแค่บอกว่า “เราเข้าใจนะ” ก็มีความหมายแล้ว"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-      />
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Toggle
-          id="a-anon"
-          checked={isAnonymous}
-          onChange={setIsAnonymous}
-          label="ตอบแบบไม่เปิดเผยตัวตน"
-          description={
-            isAnonymous
-              ? 'คนอื่นจะเห็นเป็น “เป็ดนิรนาม” · เลี่ยงรายละเอียดที่ทำให้คนอื่นเดาได้ว่าเป็นใคร'
-              : undefined
-          }
-        />
-        <Button type="submit" icon={Send} loading={sending} disabled={!content.trim()}>
-          ส่งคำตอบ
-        </Button>
-      </div>
-    </form>
-  );
-};
-
-// โครงกระทู้ระหว่างโหลด (ขนาดใกล้ของจริง หน้าจะไม่กระโดดตอนข้อมูลมา)
+// โครงคำถามระหว่างโหลด (ขนาดใกล้ของจริง หน้าจะไม่กระโดดตอนข้อมูลมา)
 const QuestionSkeleton = () => {
   return (
     <SkeletonGroup className="mx-auto max-w-2xl space-y-5">
@@ -110,7 +46,7 @@ const QuestionSkeleton = () => {
 const QADetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isModerator = useAuthStore((s) => s.user?.role === 'moderator');
+  const isModerator = useAuthStore(selectIsModerator);
   const { data, error, setData, retry } = useApiQuery(readQuestion, id);
   const question = data?.question ?? null;
   const [editing, setEditing] = useState(false);
@@ -151,7 +87,6 @@ const QADetailPage = () => {
     );
   }
 
-  const topic = TOPICS[question.topic] ?? TOPICS.other;
   const patchQuestion = (patch) => setData((d) => ({ question: { ...d.question, ...patch } }));
 
   const saveEdit = async (payload) => {
@@ -161,7 +96,7 @@ const QADetailPage = () => {
       patchQuestion(data.question);
       setEditing(false);
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setSaving(false);
     }
@@ -181,7 +116,7 @@ const QADetailPage = () => {
       toast('ลบคำถามแล้ว', 'success');
       navigate('/qa', { replace: true });
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     }
   };
 
@@ -206,52 +141,13 @@ const QADetailPage = () => {
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex flex-wrap gap-1.5">
-                <Badge>
-                  <topic.icon size={14} /> {topic.label}
-                </Badge>
-                {question.tagYear && <Badge tone="calm">{yearLabel(question.tagYear)}</Badge>}
-                {question.isAnonymous && (
-                  <Badge tone="muted">
-                    <EyeOff size={12} /> ไม่เปิดเผยตัวตน
-                  </Badge>
-                )}
-              </div>
-              <div className="-mt-1 -mr-2 flex">
-                {question.isMine && (
-                  <IconButton icon={Pencil} label="แก้ไข" onClick={() => setEditing(true)} />
-                )}
-                {(question.isMine || isModerator) && (
-                  <IconButton icon={Trash} label="ลบ" onClick={remove} />
-                )}
-                {!question.isMine && (
-                  <ReportButton
-                    target={{ type: 'question', id: question.id, label: question.title }}
-                  />
-                )}
-              </div>
-            </div>
-            <h1 className="text-2xl font-medium">{question.title}</h1>
-            <p className="break-words whitespace-pre-wrap">{question.content}</p>
-            <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
-              <span className="flex min-w-0 items-center gap-2 text-sm text-muted">
-                <DuckAvatar
-                  avatar={question.author.avatar}
-                  size={32}
-                  label={question.author.nickname}
-                />
-                <span className="min-w-0">
-                  <span className="font-semibold text-ink">{question.author.nickname}</span>
-                  {question.author.year && ` · ${yearLabel(question.author.year)}`}
-                  <br />
-                  {timeAgo(question.createdAt)}
-                </span>
-              </span>
-              <LoveButton question={question} onChange={(_id, patch) => patchQuestion(patch)} />
-            </div>
-          </>
+          <QuestionDetail
+            question={question}
+            canDelete={question.isMine || isModerator}
+            onEdit={() => setEditing(true)}
+            onDelete={remove}
+            onLoveChange={(_id, patch) => patchQuestion(patch)}
+          />
         )}
       </article>
 

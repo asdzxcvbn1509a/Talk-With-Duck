@@ -1,6 +1,5 @@
 // ติดตามว่าใครต่อ socket อยู่ในห้องไหน และเคลียร์สมาชิกที่หลุดไปแล้ว (ปิดแท็บ/เน็ตหลุด/server รีสตาร์ต)
-import { prisma } from '../lib/prisma.js';
-import { leaveRoom } from '../services/room.service.js';
+import { leaveRoom, listActiveMemberships } from '../services/room.service.js';
 
 const DISCONNECT_GRACE_MS = 20 * 1000; // เผื่อรีเฟรชหน้า/เน็ตสะดุด
 const STALE_MS = 60 * 1000; // เข้าห้องทาง REST แล้วแต่ไม่ได้ต่อ socket ภายในเวลานี้
@@ -70,10 +69,7 @@ export const scheduleLeave = (roomId, userId) => {
 };
 
 const sweep = async () => {
-  const members = await prisma.roomMember.findMany({
-    where: { leftAt: null },
-    select: { roomId: true, userId: true, joinedAt: true },
-  });
+  const members = await listActiveMemberships();
   const now = Date.now();
   for (const m of members) {
     if (isOnline(m.roomId, m.userId) || pendingLeaves.has(leaveKey(m.roomId, m.userId))) continue;

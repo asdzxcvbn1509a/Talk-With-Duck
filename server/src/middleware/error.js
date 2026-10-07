@@ -1,3 +1,5 @@
+// แปลง error ทุกแบบเป็นรูปแบบเดียว { error: { code, message } } โดย message เป็นภาษาไทยพร้อมแสดงผู้ใช้
+// controller ส่ง error มาที่นี่ด้วย next(err) · error ที่ไม่รู้จักบันทึก log แล้วตอบ 500 โดยไม่เปิดเผยรายละเอียด
 import { Prisma } from '@prisma/client';
 import { HttpError } from '../utils/httpError.js';
 

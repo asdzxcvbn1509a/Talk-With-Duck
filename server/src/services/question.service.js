@@ -1,9 +1,10 @@
 // Open Q&A Board: ตั้งกระทู้ ตอบได้ไม่จำกัดจำนวนคน กดถูกใจ และโหมดไม่เปิดเผยตัวตน (ข้อ 3.5.7)
 import { prisma } from '../lib/prisma.js';
-import { presentAnswer, presentQuestion } from '../utils/present.js';
+import { presentAnswer, presentQuestion, publicUserSelect } from '../utils/present.js';
 import { forbidden, notFound } from '../utils/httpError.js';
+import { isModerator } from '../utils/roles.js';
 
-const userSelect = { select: { id: true, nickname: true, avatar: true, year: true } };
+const userSelect = { select: publicUserSelect };
 
 const questionInclude = (viewer) => ({
   user: userSelect,
@@ -12,7 +13,20 @@ const questionInclude = (viewer) => ({
 });
 
 const questionNotFound = () => notFound('QUESTION_NOT_FOUND', 'ไม่พบคำถามนี้ (อาจถูกลบไปแล้ว)');
-const isModerator = (viewer) => viewer.role === 'moderator';
+
+/** คำถามที่ยังแสดงบนบอร์ด (ไม่มี หรือถูกผู้ดูแลซ่อน = 404) · db เป็น prisma หรือ tx ของ transaction ก็ได้ */
+const findVisibleQuestion = async (db, id) => {
+  const question = await db.question.findUnique({ where: { id } });
+  if (!question || question.isHidden) throw questionNotFound();
+  return question;
+};
+
+/** แก้ไข/ลบโพสต์ได้เฉพาะเจ้าของ · allowModerator: ผู้ดูแลลบได้ด้วย */
+const assertCanModify = (post, viewer, message, { allowModerator = false } = {}) => {
+  if (post.userId !== viewer.id && !(allowModerator && isModerator(viewer))) {
+    throw forbidden('NOT_OWNER', message);
+  }
+};
 
 /**
  * ค้นจากหัวข้อและรายละเอียด (ไม่สนตัวพิมพ์เล็ก/ใหญ่ของภาษาอังกฤษ)
@@ -80,12 +94,9 @@ export const createQuestion = async (viewer, data) => {
   return presentQuestion(question, viewer);
 };
 
-const loadOwnQuestion = async (viewer, id, { allowModerator = false } = {}) => {
-  const question = await prisma.question.findUnique({ where: { id } });
-  if (!question || question.isHidden) throw questionNotFound();
-  if (question.userId !== viewer.id && !(allowModerator && isModerator(viewer))) {
-    throw forbidden('NOT_OWNER', 'แก้ไข/ลบได้เฉพาะคำถามของตัวเอง');
-  }
+const loadOwnQuestion = async (viewer, id, options) => {
+  const question = await findVisibleQuestion(prisma, id);
+  assertCanModify(question, viewer, 'แก้ไข/ลบได้เฉพาะคำถามของตัวเอง', options);
   return question;
 };
 
@@ -105,8 +116,7 @@ export const deleteQuestion = async (viewer, id) => {
 };
 
 export const createAnswer = async (viewer, questionId, data) => {
-  const question = await prisma.question.findUnique({ where: { id: questionId } });
-  if (!question || question.isHidden) throw questionNotFound();
+  await findVisibleQuestion(prisma, questionId);
   const answer = await prisma.answer.create({
     data: { ...data, questionId, userId: viewer.id },
     include: { user: userSelect },
@@ -114,12 +124,10 @@ export const createAnswer = async (viewer, questionId, data) => {
   return presentAnswer(answer, viewer);
 };
 
-const loadOwnAnswer = async (viewer, id, { allowModerator = false } = {}) => {
+const loadOwnAnswer = async (viewer, id, options) => {
   const answer = await prisma.answer.findUnique({ where: { id } });
   if (!answer || answer.isHidden) throw notFound('ANSWER_NOT_FOUND', 'ไม่พบคำตอบนี้');
-  if (answer.userId !== viewer.id && !(allowModerator && isModerator(viewer))) {
-    throw forbidden('NOT_OWNER', 'แก้ไข/ลบได้เฉพาะคำตอบของตัวเอง');
-  }
+  assertCanModify(answer, viewer, 'แก้ไข/ลบได้เฉพาะคำตอบของตัวเอง', options);
   return answer;
 };
 
@@ -137,8 +145,7 @@ export const deleteAnswer = async (viewer, id) => {
 /** ปุ่ม Give Love: กดครั้งแรกเพิ่ม กดซ้ำเพื่อยกเลิก */
 export const toggleLove = async (viewer, questionId) => {
   return prisma.$transaction(async (tx) => {
-    const question = await tx.question.findUnique({ where: { id: questionId } });
-    if (!question || question.isHidden) throw questionNotFound();
+    await findVisibleQuestion(tx, questionId);
 
     const key = { questionId_userId: { questionId, userId: viewer.id } };
     const existing = await tx.questionLove.findUnique({ where: key });

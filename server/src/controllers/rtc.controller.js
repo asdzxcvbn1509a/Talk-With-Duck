@@ -1,6 +1,7 @@
+// รับคำขอ /api/rtc: เซิร์ฟเวอร์ STUN/TURN สำหรับ WebRTC
+// TURN ช่วยให้ต่อเสียงผ่าน NAT ของมือถือ/เครือข่ายมหาวิทยาลัยได้ (ตั้งค่าใน env ดู docs/deploy.md ข้อ 6)
 import { env } from '../config/env.js';
 
-// เซิร์ฟเวอร์ STUN/TURN สำหรับ WebRTC · TURN ช่วยให้ต่อเสียงผ่าน NAT ของมือถือ/เครือข่ายมหาวิทยาลัยได้
 export const iceServers = (_req, res, next) => {
   try {
     const servers = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];

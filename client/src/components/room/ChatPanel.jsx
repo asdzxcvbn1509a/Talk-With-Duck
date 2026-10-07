@@ -2,12 +2,11 @@
 import { Send, Sparkles, X } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { LIMITS, STICKERS } from '../../config/constants';
-import { errorMessage } from '../../lib/api';
+import { toastError } from '../../lib/api';
 import { clockTime } from '../../lib/format';
 import { roomSession } from '../../lib/roomSession';
 import { useAuthStore } from '../../stores/authStore';
 import { useRoomStore } from '../../stores/roomStore';
-import { toast } from '../../stores/uiStore';
 import DuckAvatar from '../DuckAvatar';
 import { ReportButton } from '../ReportModal';
 import { IconButton } from '../ui';
@@ -87,7 +86,7 @@ const ChatPanel = ({ className = '', onClose, title = 'แชทในห้อ�
       if (type === 'text') setText('');
       setShowStickers(false);
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setSending(false);
     }

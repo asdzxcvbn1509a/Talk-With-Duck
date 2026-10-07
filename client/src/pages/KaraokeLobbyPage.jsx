@@ -1,3 +1,4 @@
+// รายการห้อง Duck Karaoke Lounge (ข้อ 3.5.6): กรองตามชั้นปี และเปิดห้องคาราโอเกะใหม่
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import CreateRoomModal from '../components/CreateRoomModal';

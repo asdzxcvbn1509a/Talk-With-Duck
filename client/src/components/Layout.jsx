@@ -1,3 +1,5 @@
+// โครงหน้าเว็บหลังเข้าสู่ระบบ: แถบบน (โลโก้ เมนู โปรไฟล์) เมนูล่างบนมือถือ และพื้นที่เนื้อหาของแต่ละหน้า
+// ไฟล์นี้อยู่ในไฟล์ JS แรกที่ทุกคนโหลด: ห้าม import ของหนัก ๆ ตรง ๆ (ดู useModeratorAlerts ที่โหลดหน้าต่างทีหลัง)
 import {
   CircleAlert,
   CircleCheck,
@@ -23,6 +25,14 @@ const NAV = [
 
 // ห้องที่กำลังคุยอยู่: ซ่อนเมนูด้านล่างเพื่อให้โฟกัสกับบทสนทนา (Progressive Disclosure)
 const FOCUS_ROUTES = [/^\/room\//, /^\/karaoke\/[^/]+$/];
+
+// เมนูบนจอกว้าง (รวมเมนูผู้ดูแล): เมนูที่เลือกอยู่มีพื้นเหลืองอ่อน
+const desktopNavClass = ({ isActive }) =>
+  `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+    isActive
+      ? 'bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300'
+      : 'text-muted hover:text-ink'
+  }`;
 
 // ไอคอนบอกประเภทของ toast ด้วย ไม่ให้ผู้ใช้ต้องแยกจากสีอย่างเดียว
 const TOAST_TONES = {
@@ -126,33 +136,13 @@ const Layout = () => {
           </Link>
           <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="เมนูหลัก">
             {NAV.slice(0, 3).map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isActive
-                      ? 'bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300'
-                      : 'text-muted hover:text-ink'
-                  }`
-                }
-              >
+              <NavLink key={item.to} to={item.to} className={desktopNavClass}>
                 <item.icon size={18} />
                 {item.label}
               </NavLink>
             ))}
             {isModerator && (
-              <NavLink
-                to="/admin/reports"
-                title="ผู้ดูแล"
-                className={({ isActive }) =>
-                  `flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                    isActive
-                      ? 'bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300'
-                      : 'text-muted hover:text-ink'
-                  }`
-                }
-              >
+              <NavLink to="/admin/reports" title="ผู้ดูแล" className={desktopNavClass}>
                 <Shield size={18} />
                 {/* จอแท็บเล็ตเหลือแค่ไอคอน เมนูจะได้พอในแถวเดียว */}
                 <span className="sr-only lg:not-sr-only">ผู้ดูแล</span>

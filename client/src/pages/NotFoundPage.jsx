@@ -1,3 +1,4 @@
+// หน้าที่ไม่มีอยู่ (ทุก path ที่ไม่ตรงกับเส้นทางใน App.jsx)
 import { Link } from 'react-router';
 import { buttonClass } from '../components/buttonClass';
 import { PageTitle } from '../components/ui';

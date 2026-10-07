@@ -2,11 +2,11 @@
 // รายการ event ทั้งหมดอยู่ใน docs/socket-events.md
 import { Server } from 'socket.io';
 import { env } from '../config/env.js';
-import { prisma } from '../lib/prisma.js';
 import { loadUserFromToken } from '../middleware/auth.js';
 import * as roomService from '../services/room.service.js';
 import * as messageService from '../services/message.service.js';
 import * as queueService from '../services/queue.service.js';
+import { isModerator } from '../utils/roles.js';
 import { channel, setIo } from './hub.js';
 import { getKaraokeState, setKaraokeState } from './karaokeState.js';
 import {
@@ -46,7 +46,7 @@ export const initRealtime = (httpServer) => {
   io.on('connection', (socket) => {
     const { user } = socket.data;
     socket.join(channel.user(user.id));
-    if (user.role === 'moderator') socket.join(channel.moderators);
+    if (isModerator(user)) socket.join(channel.moderators);
 
     registerLobby(socket);
     registerRoom(io, socket);
@@ -198,11 +198,7 @@ const registerKaraoke = (socket) => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
     try {
-      const room = await prisma.room.findUnique({
-        where: { id: roomId },
-        select: { hostId: true, type: true, isActive: true },
-      });
-      if (!room?.isActive || room.type !== 'karaoke' || room.hostId !== user.id) return;
+      if (!(await roomService.isKaraokeHost(roomId, user.id))) return;
 
       const stored = setKaraokeState(roomId, {
         songId: typeof state.songId === 'string' ? state.songId : null,

@@ -8,8 +8,7 @@ import ConnectionBanner from '../components/room/ConnectionBanner';
 import ControlBar from '../components/room/ControlBar';
 import LeaveRoomDialog from '../components/room/LeaveRoomDialog';
 import ParticipantGrid from '../components/room/ParticipantGrid';
-import PreJoin from '../components/room/PreJoin';
-import RoomStatusScreen from '../components/room/RoomStatusScreen';
+import RoomGate from '../components/room/RoomGate';
 import ShareRoomButton from '../components/room/ShareRoomButton';
 import { Badge, PageTitle } from '../components/ui';
 import { ROOM_TYPES } from '../config/constants';
@@ -49,7 +48,6 @@ const RoomPage = () => {
   const members = useRoomStore((s) => s.members);
   const muted = useRoomStore((s) => s.muted);
   const micAvailable = useRoomStore((s) => s.micAvailable);
-  const error = useRoomStore((s) => s.error);
   // จอใหญ่เปิดแชทไว้ข้าง ๆ เลย จอมือถือซ่อนไว้ก่อน (Progressive Disclosure)
   const [chatOpen, setChatOpen] = useState(
     () => window.matchMedia?.('(min-width: 1024px)').matches ?? false,
@@ -60,27 +58,12 @@ const RoomPage = () => {
 
   if (preview?.type === 'karaoke') return <Navigate to={`/karaoke/${id}`} replace />;
 
-  // หลุดระหว่างอยู่ในห้อง (ถ้าเข้าห้องไม่สำเร็จตั้งแต่แรก PreJoin จะแสดงสาเหตุเอง)
-  const ended =
-    ['closed', 'replaced', 'left', 'kicked'].includes(status) ||
-    (status === 'error' && !lifecycle.joinError);
-  if (ended && !lifecycle.joining) {
-    return (
-      <>
-        {pageTitle}
-        <RoomStatusScreen
-          status={status}
-          error={error}
-          onRetry={() => lifecycle.join({ withMic: true })}
-        />
-      </>
-    );
-  }
+  // ยังไม่ได้เข้าห้อง หรือหลุดออกมาแล้ว
   if (status !== 'joined' || !room) {
     return (
       <>
         {pageTitle}
-        <PreJoin {...lifecycle} onJoin={lifecycle.join} />
+        <RoomGate lifecycle={lifecycle} />
       </>
     );
   }

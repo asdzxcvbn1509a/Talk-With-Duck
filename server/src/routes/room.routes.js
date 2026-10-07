@@ -1,3 +1,4 @@
+// เส้นทาง /api/rooms: ห้องสนทนา ข้อความแชท และคิวเพลงคาราโอเกะ (ข้อ 3.5.5–3.5.6)
 import { Router } from 'express';
 import * as rooms from '../controllers/room.controller.js';
 import { requireAuth, requireGuidelines } from '../middleware/auth.js';

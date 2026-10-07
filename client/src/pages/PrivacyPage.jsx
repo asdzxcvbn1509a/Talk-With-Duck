@@ -13,7 +13,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { Link } from 'react-router';
-import { PageTitle } from '../components/ui';
+import { NewTabLink, PageTitle } from '../components/ui';
 import { contactUrl } from '../config/links';
 import { useAuthStore } from '../stores/authStore';
 
@@ -121,16 +121,10 @@ const PrivacyPage = () => {
       {contactUrl() && (
         <p className="text-center text-sm text-muted">
           มีคำถามเรื่องข้อมูลของคุณ?{' '}
-          <a
-            href={contactUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="link inline-flex items-center gap-1"
-          >
+          <NewTabLink href={contactUrl()} className="link inline-flex items-center gap-1">
             ติดต่อทีมผู้ดูแล
             <ExternalLink size={14} aria-hidden="true" />
-            <span className="sr-only"> (เปิดในแท็บใหม่)</span>
-          </a>
+          </NewTabLink>
         </p>
       )}
       <p className="text-center text-xs text-muted">ปรับปรุงล่าสุด {UPDATED_AT}</p>

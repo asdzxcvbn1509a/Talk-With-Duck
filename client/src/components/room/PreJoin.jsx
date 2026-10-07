@@ -7,7 +7,7 @@ import { ROOM_TYPES } from '../../config/constants';
 import { errorCode, errorMessage } from '../../lib/api';
 import { yearLabel } from '../../lib/format';
 import DuckAvatar from '../DuckAvatar';
-import { Badge, Button, EmptyState, Spinner, Toggle } from '../ui';
+import { Badge, Button, EmptyState, ErrorAlert, Spinner, Toggle } from '../ui';
 
 const JOIN_ERRORS = {
   ROOM_FULL: {
@@ -130,9 +130,7 @@ const PreJoin = ({ preview, previewError, joining, joinError, onJoin, backTo = '
         </div>
 
         {joinError && !known && (
-          <p className="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">
-            {errorMessage(joinError, joinError.message)}
-          </p>
+          <ErrorAlert>{errorMessage(joinError, joinError.message)}</ErrorAlert>
         )}
 
         <Button

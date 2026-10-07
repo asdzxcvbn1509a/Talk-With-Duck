@@ -85,6 +85,50 @@ describe.skipIf(!hasTestDb)('Open Q&A Board (ตาราง 3.5)', () => {
     expect(res.status).toBe(403);
   });
 
+  it('คำตอบ: เจ้าของแก้ไข/ลบได้ คนอื่นไม่ได้ ผู้ดูแลลบได้', async () => {
+    const asker = await createUser();
+    const helper = await createUser();
+    const other = await createUser();
+    const mod = await createUser({ role: 'moderator' });
+    const q = await api().post('/api/questions').set(bearer(asker.token)).send(question);
+    const answer = (content) =>
+      api()
+        .post(`/api/questions/${q.body.question.id}/answers`)
+        .set(bearer(helper.token))
+        .send({ content })
+        .expect(201);
+    const first = (await answer('ลองคุยกับรุ่นพี่ดูนะ')).body.answer;
+    const second = (await answer('สู้ ๆ นะ')).body.answer;
+
+    const edited = await api()
+      .patch(`/api/answers/${first.id}`)
+      .set(bearer(helper.token))
+      .send({ content: 'ลองคุยกับรุ่นพี่ในสาขาดูนะ' })
+      .expect(200);
+    expect(edited.body.answer).toMatchObject({
+      id: first.id,
+      content: 'ลองคุยกับรุ่นพี่ในสาขาดูนะ',
+    });
+
+    const notOwner = await api()
+      .patch(`/api/answers/${first.id}`)
+      .set(bearer(other.token))
+      .send({ content: 'แก้คำตอบของคนอื่น' });
+    expect(notOwner.status).toBe(403);
+    expect(notOwner.body.error.code).toBe('NOT_OWNER');
+    const notOwnerDelete = await api().delete(`/api/answers/${first.id}`).set(bearer(other.token));
+    expect(notOwnerDelete.status).toBe(403);
+
+    await api().delete(`/api/answers/${first.id}`).set(bearer(helper.token)).expect(204);
+    await api().delete(`/api/answers/${second.id}`).set(bearer(mod.token)).expect(204);
+
+    const missing = await api().delete(`/api/answers/${first.id}`).set(bearer(helper.token));
+    expect(missing.status).toBe(404);
+    expect(missing.body.error.code).toBe('ANSWER_NOT_FOUND');
+    const detail = await api().get(`/api/questions/${q.body.question.id}`).set(bearer(asker.token));
+    expect(detail.body.question.answers).toHaveLength(0);
+  });
+
   it('แบ่งหน้าด้วย cursor ได้ครบไม่ซ้ำ', async () => {
     const u = await createUser();
     for (let i = 1; i <= 5; i += 1) {
@@ -316,6 +360,34 @@ describe.skipIf(!hasTestDb)('ระบบแจ้งรายงานและ
     const res = await api().get('/api/me').set(bearer(troll.token));
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('BANNED');
+  });
+
+  it('ระงับบัญชีตอนอยู่ในห้อง: ถูกพาออกจากห้อง และเจ้าของห้องย้ายไปคนที่อยู่ต่อ', async () => {
+    const troll = await createUser();
+    const friend = await createUser();
+    const reporter = await createUser();
+    const mod = await createUser({ role: 'moderator' });
+    const room = await api()
+      .post('/api/rooms')
+      .set(bearer(troll.token))
+      .send({ name: 'ห้องที่เป็ดเกเรเปิด', type: 'group' })
+      .expect(201);
+    const roomId = room.body.room.id;
+    await api().post(`/api/rooms/${roomId}/join`).set(bearer(friend.token)).expect(200);
+
+    const report = await api()
+      .post('/api/reports')
+      .set(bearer(reporter.token))
+      .send({ targetType: 'user', targetId: troll.user.id, reason: 'harassment' });
+    await api()
+      .patch(`/api/admin/reports/${report.body.id}`)
+      .set(bearer(mod.token))
+      .send({ action: 'ban' })
+      .expect(204);
+
+    const after = await api().get(`/api/rooms/${roomId}`).set(bearer(friend.token)).expect(200);
+    expect(after.body.room.members.map((m) => m.userId)).toEqual([friend.user.id]);
+    expect(after.body.room.hostId).toBe(friend.user.id);
   });
 
   it('ผู้ดูแลปลดระงับแล้วผู้ใช้กลับมาใช้งานได้', async () => {

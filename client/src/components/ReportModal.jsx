@@ -1,9 +1,9 @@
 // ปุ่มและหน้าต่างแจ้งรายงานเนื้อหา/พฤติกรรมที่ไม่เหมาะสม (ข้อ 3.5.7)
 import { Flag } from 'lucide-react';
 import { useState } from 'react';
-import { REPORT_REASONS } from '../config/constants';
+import { LIMITS, REPORT_REASONS } from '../config/constants';
 import { createReport } from '../api/reports';
-import { errorMessage } from '../lib/api';
+import { toastError } from '../lib/api';
 import CrisisSupport from './CrisisSupport';
 import { toast } from '../stores/uiStore';
 import { Button, Field, IconButton, Modal } from './ui';
@@ -31,7 +31,7 @@ const ReportModal = ({ open, onClose, target }) => {
       toast(data.message, 'success');
       close();
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ const ReportModal = ({ open, onClose, target }) => {
           <textarea
             id="report-details"
             className="input min-h-24"
-            maxLength={500}
+            maxLength={LIMITS.reportDetailsMax}
             value={details}
             onChange={(e) => setDetails(e.target.value)}
           />

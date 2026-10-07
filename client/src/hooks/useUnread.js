@@ -1,3 +1,4 @@
+// ตัวนับข้อความแชทที่ยังไม่ได้อ่าน (ตัวเลขบนปุ่มแชทใน ControlBar ตอนปิดแผงแชทอยู่)
 import { useState } from 'react';
 import { useRoomStore } from '../stores/roomStore';
 

@@ -1,3 +1,4 @@
+// จุดเริ่มต้นของหน้าเว็บ: โหลดฟอนต์ (Noto Sans Thai สำหรับเนื้อหา, Mitr สำหรับหัวข้อ) แล้วแสดง App
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@fontsource/noto-sans-thai/400.css';

@@ -1,3 +1,4 @@
+// รันก่อนทุกไฟล์เทสต์ฝั่งหน้าเว็บ: เพิ่ม matcher ของ jest-dom ถอดหน้าหลังแต่ละเทสต์ และเติมของที่ jsdom ไม่มี
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';

@@ -1,15 +1,14 @@
 // ระบบแจ้งรายงานเนื้อหา/พฤติกรรมที่ไม่เหมาะสม และการตรวจสอบโดยผู้ดูแล (ข้อ 3.5.7)
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import { disconnectUser, emitToModerators, emitToRoom, emitToUser } from '../realtime/hub.js';
-import { publicUser } from '../utils/present.js';
+import { emitToModerators, emitToRoom } from '../realtime/hub.js';
+import { publicUser, publicUserSelect } from '../utils/present.js';
 import { badRequest, conflict, notFound } from '../utils/httpError.js';
-import { closeRoom, leaveRoom } from './room.service.js';
-import { revokeAllForUser } from './token.service.js';
+import { banUser } from './admin.service.js';
+import { closeRoom } from './room.service.js';
 
-const userSelect = {
-  select: { id: true, nickname: true, avatar: true, year: true, isBanned: true },
-};
+// ผู้ดูแลต้องเห็นว่าเจ้าของถูกระงับบัญชีไปแล้วหรือยัง จึงอ่าน isBanned เพิ่มจากข้อมูลสาธารณะ
+const userSelect = { select: { ...publicUserSelect, isBanned: true } };
 
 // ตารางของสิ่งที่ถูกรายงานแต่ละประเภท และข้อมูลเจ้าของตัวจริงที่ต้องโหลดมาด้วย
 // (ผู้ดูแลต้องเห็นเจ้าของแม้โพสต์จะไม่ระบุตัวตน)
@@ -169,40 +168,6 @@ const hideTarget = async (type, target) => {
     default:
       throw badRequest('CANNOT_HIDE', 'รายการประเภทนี้ซ่อนไม่ได้ ใช้การระงับบัญชีแทน');
   }
-};
-
-export const banUser = async (userId) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้');
-  if (user.role === 'moderator')
-    throw badRequest('CANNOT_BAN_MODERATOR', 'ระงับบัญชีผู้ดูแลไม่ได้');
-
-  await prisma.user.update({ where: { id: userId }, data: { isBanned: true } });
-  await revokeAllForUser(userId);
-  const memberships = await prisma.roomMember.findMany({
-    where: { userId, leftAt: null },
-    select: { roomId: true },
-  });
-  for (const { roomId } of memberships) await leaveRoom(roomId, userId);
-  emitToUser(userId, 'auth:banned', {});
-  disconnectUser(userId);
-};
-
-export const listBannedUsers = async () => {
-  const users = await prisma.user.findMany({
-    where: { isBanned: true },
-    ...userSelect,
-    orderBy: { nickname: 'asc' },
-    take: 200,
-  });
-  return users.map(publicUser);
-};
-
-// ปลดระงับ: session ถูกเพิกถอนไปตอนระงับแล้ว ผู้ใช้ต้องเข้าสู่ระบบใหม่ · เนื้อหาที่ถูกซ่อนยังซ่อนอยู่
-export const unbanUser = async (userId) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw notFound('USER_NOT_FOUND', 'ไม่พบผู้ใช้');
-  await prisma.user.update({ where: { id: userId }, data: { isBanned: false } });
 };
 
 export const reviewReport = async (moderator, reportId, { action }) => {

@@ -11,8 +11,7 @@ import ConnectionBanner from '../components/room/ConnectionBanner';
 import ControlBar from '../components/room/ControlBar';
 import LeaveRoomDialog from '../components/room/LeaveRoomDialog';
 import ParticipantGrid from '../components/room/ParticipantGrid';
-import PreJoin from '../components/room/PreJoin';
-import RoomStatusScreen from '../components/room/RoomStatusScreen';
+import RoomGate from '../components/room/RoomGate';
 import ShareRoomButton from '../components/room/ShareRoomButton';
 import { Badge, PageTitle, Segmented } from '../components/ui';
 import { useLeaveRoomGuard } from '../hooks/useLeaveRoomGuard';
@@ -39,34 +38,18 @@ const KaraokeRoomPage = () => {
   const members = useRoomStore((s) => s.members);
   const muted = useRoomStore((s) => s.muted);
   const micAvailable = useRoomStore((s) => s.micAvailable);
-  const error = useRoomStore((s) => s.error);
   const [tab, setTab] = useState('queue');
   // ไม่ใช้ชื่อห้องเป็นชื่อแท็บ (ดู PageTitle)
   const pageTitle = <PageTitle title="ห้องคาราโอเกะ" />;
 
   if (preview && preview.type !== 'karaoke') return <Navigate to={`/room/${id}`} replace />;
 
-  const ended =
-    ['closed', 'replaced', 'left', 'kicked'].includes(status) ||
-    (status === 'error' && !lifecycle.joinError);
-  if (ended && !lifecycle.joining) {
-    return (
-      <>
-        {pageTitle}
-        <RoomStatusScreen
-          status={status}
-          error={error}
-          backTo="/karaoke"
-          onRetry={() => lifecycle.join({ withMic: true })}
-        />
-      </>
-    );
-  }
+  // ยังไม่ได้เข้าห้อง หรือหลุดออกมาแล้ว (ปุ่มกลับพาไปหน้ารายการห้องคาราโอเกะ)
   if (status !== 'joined' || !room) {
     return (
       <>
         {pageTitle}
-        <PreJoin {...lifecycle} onJoin={lifecycle.join} backTo="/karaoke" />
+        <RoomGate lifecycle={lifecycle} />
       </>
     );
   }

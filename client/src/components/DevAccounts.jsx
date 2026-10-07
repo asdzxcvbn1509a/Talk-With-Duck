@@ -7,7 +7,7 @@ import { useApiQuery } from '../hooks/useApiQuery';
 import { errorMessage } from '../lib/api';
 import { devLogin } from '../lib/auth';
 import DuckAvatar from './DuckAvatar';
-import { Spinner } from './ui';
+import { ErrorAlert, Spinner } from './ui';
 
 const DevAccounts = ({ onSignedIn }) => {
   const { data, error, loading } = useApiQuery(listDevAccounts);
@@ -62,11 +62,7 @@ const DevAccounts = ({ onSignedIn }) => {
           ))}
         </ul>
       )}
-      {loginError && (
-        <p className="mt-2 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger" role="alert">
-          {loginError}
-        </p>
-      )}
+      {loginError && <ErrorAlert className="mt-2">{loginError}</ErrorAlert>}
     </section>
   );
 };

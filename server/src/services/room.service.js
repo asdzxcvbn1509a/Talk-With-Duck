@@ -3,10 +3,10 @@ import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { clearKaraokeState } from '../realtime/karaokeState.js';
 import { emitToLobby, emitToRoom, emitToUser } from '../realtime/hub.js';
-import { presentRoom } from '../utils/present.js';
+import { presentRoom, publicUserSelect } from '../utils/present.js';
 import { badRequest, conflict, forbidden, notFound } from '../utils/httpError.js';
 
-const userSelect = { select: { id: true, nickname: true, avatar: true, year: true } };
+const userSelect = { select: publicUserSelect };
 
 export const roomInclude = {
   members: { where: { leftAt: null }, orderBy: { joinedAt: 'asc' }, include: { user: userSelect } },
@@ -19,6 +19,13 @@ const capacityFor = (type) => (type === 'private' ? 2 : env.GROUP_ROOM_MAX);
 
 const lockRoom = (tx, roomId) =>
   tx.$queryRaw`SELECT id FROM rooms WHERE id = ${roomId}::uuid FOR UPDATE`;
+
+/** แถวสมาชิกของผู้ใช้ในห้อง (รวมคนที่ออกไปแล้ว) · db เป็น prisma หรือ tx ของ transaction ก็ได้ */
+const findMember = (db, roomId, userId) =>
+  db.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
+
+/** ห้องปิดไปแล้ว (ใช้ทั้งตอนเข้าห้อง เชิญออก และจองเพลงใน queue.service) */
+export const roomClosed = () => notFound('ROOM_CLOSED', 'ห้องนี้ปิดไปแล้ว');
 
 /**
  * ส่งข้อมูลห้องล่าสุดไปให้ทุกคนที่เปิดหน้า lobby อยู่
@@ -52,9 +59,7 @@ export const getRoom = async (roomId) => {
 };
 
 export const getActiveMembership = async (roomId, userId) => {
-  const member = await prisma.roomMember.findUnique({
-    where: { roomId_userId: { roomId, userId } },
-  });
+  const member = await findMember(prisma, roomId, userId);
   return member && !member.leftAt ? member : null;
 };
 
@@ -68,9 +73,9 @@ export const assertActiveMember = async (roomId, userId) => {
 const addMemberTx = async (tx, roomId, userId) => {
   await lockRoom(tx, roomId);
   const room = await tx.room.findUnique({ where: { id: roomId } });
-  if (!room || !room.isActive) throw notFound('ROOM_CLOSED', 'ห้องนี้ปิดไปแล้ว');
+  if (!room || !room.isActive) throw roomClosed();
 
-  const existing = await tx.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
+  const existing = await findMember(tx, roomId, userId);
   if (existing?.kickedAt) {
     throw forbidden(
       'ROOM_KICKED',
@@ -99,17 +104,20 @@ const announceJoin = async (roomId, userId) => {
   return room;
 };
 
-/** อยู่ได้ทีละห้อง: ออกจากห้องอื่นที่ค้างอยู่ก่อนเข้าห้องใหม่ */
-const leaveOtherRooms = async (userId, exceptRoomId) => {
-  const others = await prisma.roomMember.findMany({
+/**
+ * ออกจากทุกห้องที่ผู้ใช้ยังอยู่ (ย้ายเจ้าของห้องหรือปิดห้องตามปกติของ leaveRoom)
+ * ใช้ตอนเข้าห้องใหม่ (อยู่ได้ทีละห้อง ยกเว้นห้องที่กำลังจะเข้า) ตอนถูกระงับบัญชี และตอนลบบัญชี
+ */
+export const leaveAllRooms = async (userId, { exceptRoomId } = {}) => {
+  const memberships = await prisma.roomMember.findMany({
     where: { userId, leftAt: null, ...(exceptRoomId ? { roomId: { not: exceptRoomId } } : {}) },
     select: { roomId: true },
   });
-  for (const { roomId } of others) await leaveRoom(roomId, userId);
+  for (const { roomId } of memberships) await leaveRoom(roomId, userId);
 };
 
 export const createRoom = async (user, { name, type, yearFilter = null }) => {
-  await leaveOtherRooms(user.id, null);
+  await leaveAllRooms(user.id);
   const room = await prisma.$transaction(async (tx) => {
     const created = await tx.room.create({
       data: { name, type, yearFilter, capacity: capacityFor(type), hostId: user.id },
@@ -122,7 +130,7 @@ export const createRoom = async (user, { name, type, yearFilter = null }) => {
 };
 
 export const joinRoom = async (roomId, userId) => {
-  await leaveOtherRooms(userId, roomId);
+  await leaveAllRooms(userId, { exceptRoomId: roomId });
   const { joined } = await prisma.$transaction((tx) => addMemberTx(tx, roomId, userId));
   // เพิ่งเข้าห้อง: คืนข้อมูลห้องชุดเดียวกับที่ประกาศให้ทุกคน
   // เป็นสมาชิกอยู่แล้ว (หรือห้องเพิ่งปิดไประหว่างนั้น) จึงค่อยอ่านห้องใหม่
@@ -137,7 +145,7 @@ export const leaveRoom = async (roomId, userId) => {
   const result = await prisma.$transaction(async (tx) => {
     await lockRoom(tx, roomId);
     const room = await tx.room.findUnique({ where: { id: roomId } });
-    const member = await tx.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
+    const member = await findMember(tx, roomId, userId);
     if (!room || !member || member.leftAt) return null;
 
     await tx.roomMember.update({ where: { id: member.id }, data: { leftAt: new Date() } });
@@ -184,7 +192,7 @@ export const kickMember = async (roomId, hostId, userId) => {
   const room = await prisma.$transaction(async (tx) => {
     await lockRoom(tx, roomId);
     const current = await tx.room.findUnique({ where: { id: roomId } });
-    if (!current?.isActive) throw notFound('ROOM_CLOSED', 'ห้องนี้ปิดไปแล้ว');
+    if (!current?.isActive) throw roomClosed();
     if (current.type === 'private') {
       throw badRequest(
         'KICK_NOT_ALLOWED',
@@ -194,7 +202,7 @@ export const kickMember = async (roomId, hostId, userId) => {
     if (current.hostId !== hostId) {
       throw forbidden('HOST_ONLY', 'เฉพาะเจ้าของห้องที่เชิญคนออกได้');
     }
-    const member = await tx.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } });
+    const member = await findMember(tx, roomId, userId);
     if (!member || member.leftAt) throw notFound('MEMBER_NOT_FOUND', 'คนนี้ออกจากห้องไปแล้ว');
 
     const now = new Date();
@@ -235,6 +243,23 @@ export const setMuted = async (roomId, userId, isMuted) => {
   if (!member) return;
   await prisma.roomMember.update({ where: { id: member.id }, data: { isMuted } });
   emitToRoom(roomId, 'room:member-updated', { userId, isMuted });
+};
+
+/** สมาชิกที่ยังไม่ออกจากห้อง (ทุกห้อง) ให้ตัวเก็บกวาดใน realtime/presence.js ตรวจว่าใครหลุดไปแล้ว */
+export const listActiveMemberships = () => {
+  return prisma.roomMember.findMany({
+    where: { leftAt: null },
+    select: { roomId: true, userId: true, joinedAt: true },
+  });
+};
+
+/** ผู้ใช้คนนี้เป็นเจ้าของห้องคาราโอเกะที่ยังเปิดอยู่ไหม (ใช้ตรวจ karaoke:state ที่ส่งมาทาง socket) */
+export const isKaraokeHost = async (roomId, userId) => {
+  const room = await prisma.room.findUnique({
+    where: { id: roomId },
+    select: { hostId: true, type: true, isActive: true },
+  });
+  return Boolean(room?.isActive && room.type === 'karaoke' && room.hostId === userId);
 };
 
 /** ผู้ดูแลปิดห้องที่ถูกรายงาน */

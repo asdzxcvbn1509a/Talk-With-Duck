@@ -3,7 +3,7 @@ import { Link, Music, Plus, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { readKaraokeConfig, resolveSong, searchSongs } from '../../api/karaoke';
 import { addSong } from '../../api/rooms';
-import { errorMessage } from '../../lib/api';
+import { toastError } from '../../lib/api';
 import { toast } from '../../stores/uiStore';
 import { Button, Segmented, Spinner } from '../ui';
 
@@ -73,7 +73,7 @@ const SongSearch = ({ roomId }) => {
         setResults([data.song]);
       }
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ const SongSearch = ({ roomId }) => {
       setResults([]);
       setQuery('');
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setAddingId(null);
     }

@@ -1,18 +1,18 @@
+// คำตอบ 1 รายการในหน้ารายละเอียดคำถาม: เจ้าของแก้ไขได้ เจ้าของหรือผู้ดูแลลบได้ คนอื่นกดรายงานได้
 import { Pencil, Trash } from 'lucide-react';
 import { useState } from 'react';
 import { LIMITS } from '../../config/constants';
 import { removeAnswer, updateAnswer } from '../../api/answers';
-import { errorMessage } from '../../lib/api';
+import { toastError } from '../../lib/api';
 import { confirmDialog } from '../../lib/dialog';
 import { timeAgo, yearLabel } from '../../lib/format';
-import { useAuthStore } from '../../stores/authStore';
-import { toast } from '../../stores/uiStore';
+import { selectIsModerator, useAuthStore } from '../../stores/authStore';
 import DuckAvatar from '../DuckAvatar';
 import { ReportButton } from '../ReportModal';
 import { Button, IconButton } from '../ui';
 
 const AnswerItem = ({ answer, onUpdated, onDeleted }) => {
-  const isModerator = useAuthStore((s) => s.user?.role === 'moderator');
+  const isModerator = useAuthStore(selectIsModerator);
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(answer.content);
   const [busy, setBusy] = useState(false);
@@ -25,7 +25,7 @@ const AnswerItem = ({ answer, onUpdated, onDeleted }) => {
       onUpdated(data.answer);
       setEditing(false);
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setBusy(false);
     }
@@ -43,7 +43,7 @@ const AnswerItem = ({ answer, onUpdated, onDeleted }) => {
       await removeAnswer(answer.id);
       onDeleted(answer.id);
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     }
   };
 

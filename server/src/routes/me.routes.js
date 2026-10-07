@@ -1,3 +1,4 @@
+// เส้นทาง /api/me: ข้อมูลของผู้ใช้ที่ล็อกอินอยู่ (ไม่ต้องยอมรับข้อตกลงก่อน หน้าข้อตกลงต้องใช้เส้นทางนี้)
 import { Router } from 'express';
 import * as me from '../controllers/me.controller.js';
 import { requireAuth } from '../middleware/auth.js';

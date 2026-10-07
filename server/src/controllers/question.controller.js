@@ -1,3 +1,4 @@
+// รับคำขอ /api/questions: บอร์ดคำถาม ตั้ง/แก้/ลบคำถาม ตอบ และส่งใจ (แก้/ลบคำตอบอยู่ใน answer.controller.js)
 import * as questionService from '../services/question.service.js';
 
 export const list = async (req, res, next) => {
@@ -56,28 +57,6 @@ export const createAnswer = async (req, res, next) => {
       req.valid.body,
     );
     res.status(201).json({ answer });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const updateAnswer = async (req, res, next) => {
-  try {
-    const answer = await questionService.updateAnswer(
-      req.user,
-      req.valid.params.id,
-      req.valid.body,
-    );
-    res.json({ answer });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const removeAnswer = async (req, res, next) => {
-  try {
-    await questionService.deleteAnswer(req.user, req.valid.params.id);
-    res.status(204).end();
   } catch (err) {
     next(err);
   }

@@ -1,135 +1,20 @@
 // หน้าหลัก (Lobby): กิจกรรมประจำวัน · ตัวกรองชั้นปี/ประเภทห้อง · รายการห้อง · ทางลัดไปบอร์ด Q&A
-import { ExternalLink, FilterX, Hand, Pin, Plus, Shuffle } from 'lucide-react';
+// การ์ดกิจกรรมและคำถามล่าสุดอยู่ใน components/lobby/
+import { FilterX, Hand, Plus, Shuffle } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import CreateRoomModal from '../components/CreateRoomModal';
 import { RoomTypeFilter, YearFilter } from '../components/Filters';
+import DailyActivityCard from '../components/lobby/DailyActivityCard';
+import LatestQuestions from '../components/lobby/LatestQuestions';
 import RoomCard, { RoomCardSkeleton } from '../components/RoomCard';
-import {
-  Button,
-  EmptyState,
-  LoadError,
-  PageTitle,
-  Skeleton,
-  SkeletonGroup,
-  Spinner,
-} from '../components/ui';
-import { activityFor } from '../config/dailyActivities';
-import { TOPICS } from '../config/constants';
-import { listQuestions } from '../api/questions';
+import { Button, EmptyState, LoadError, PageTitle, SkeletonGroup, Spinner } from '../components/ui';
 import { quickMatch } from '../api/rooms';
-import { useApiQuery } from '../hooks/useApiQuery';
 import { useLobbyRooms } from '../hooks/useLobbyRooms';
-import { errorMessage } from '../lib/api';
-import { timeAgo } from '../lib/format';
+import { toastError } from '../lib/api';
 import { roomPath } from '../lib/routes';
 import { useAuthStore } from '../stores/authStore';
-import { toast, useUiStore } from '../stores/uiStore';
-
-const LATEST_QUESTIONS = { limit: 3 };
-
-const ACTIVITY_CARD_CLASS =
-  'relative block overflow-hidden rounded-(--radius-card) bg-gradient-to-br from-duck-300 via-duck-400 to-beak-400 p-6 text-on-duck shadow-(--shadow-soft)';
-
-const DailyActivityCard = () => {
-  const activity = activityFor();
-  const content = (
-    <>
-      <p className="flex items-center gap-1.5 text-sm font-semibold opacity-80">
-        <activity.icon size={16} />
-        {activity.special ? 'Duck Community Week' : 'กิจกรรมวันนี้'}
-        {activity.href && <ExternalLink size={14} aria-hidden="true" />}
-      </p>
-      <h2 className="mt-1 max-w-[80%] text-2xl font-medium">{activity.title}</h2>
-      <p className="mt-2 max-w-[75%] text-on-duck/80">
-        {activity.detail}
-        {activity.href && <span className="sr-only"> (เปิดในแท็บใหม่)</span>}
-      </p>
-      <img
-        src="/duck.svg"
-        alt=""
-        className="absolute -right-4 -bottom-6 h-24 w-24 rotate-12 opacity-90 sm:h-32 sm:w-32"
-      />
-    </>
-  );
-
-  // แบบประเมิน (Google Forms) เป็นเว็บภายนอก: เปิดแท็บใหม่ ผู้ใช้จะได้ไม่หลุดจากบ่อเป็ด
-  return activity.href ? (
-    <a
-      href={activity.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={ACTIVITY_CARD_CLASS}
-    >
-      {content}
-    </a>
-  ) : (
-    <Link to={activity.to} className={ACTIVITY_CARD_CLASS}>
-      {content}
-    </Link>
-  );
-};
-
-const LatestQuestions = () => {
-  const { data, error, loading } = useApiQuery(listQuestions, LATEST_QUESTIONS);
-  const items = data?.items ?? [];
-
-  return (
-    <section className="card p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-medium">
-          <Pin size={20} className="text-beak-500" /> บอร์ดฝากคำถาม
-        </h2>
-        <Link to="/qa" className="link text-sm">
-          ดูทั้งหมด
-        </Link>
-      </div>
-      {loading ? (
-        <SkeletonGroup className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-3 p-2">
-              <Skeleton className="h-9 w-9 shrink-0 rounded-xl" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/3" />
-              </div>
-            </div>
-          ))}
-        </SkeletonGroup>
-      ) : error || items.length === 0 ? (
-        <p className="text-sm text-muted">
-          {error
-            ? 'โหลดคำถามล่าสุดไม่สำเร็จ ดูทั้งหมดได้ที่บอร์ด'
-            : 'ยังไม่มีคำถาม เป็นคนแรกที่ทิ้งคำถามไว้สิ'}
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {items.map((q) => {
-            const topic = TOPICS[q.topic] ?? TOPICS.other;
-            return (
-              <li key={q.id}>
-                <Link
-                  to={`/qa/${q.id}`}
-                  className="flex items-center gap-3 rounded-2xl p-2 hover:bg-surface-2"
-                >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-duck-100 text-duck-800 dark:bg-surface-2 dark:text-duck-300">
-                    <topic.icon size={18} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{q.title}</span>
-                    <span className="text-xs text-muted">
-                      {q.answerCount} คำตอบ · {timeAgo(q.createdAt)}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-};
+import { useUiStore } from '../stores/uiStore';
 
 const LobbyPage = () => {
   const user = useAuthStore((s) => s.user);
@@ -147,7 +32,7 @@ const LobbyPage = () => {
       const { data } = await quickMatch({ year });
       navigate(roomPath(data.room), { state: { autoJoin: true } });
     } catch (err) {
-      toast(errorMessage(err), 'error');
+      toastError(err);
     } finally {
       setMatching(false);
     }
