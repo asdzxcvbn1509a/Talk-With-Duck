@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import * as rooms from '../controllers/room.controller.js';
 import { requireAuth, requireGuidelines } from '../middleware/auth.js';
-import { chatLimiter, postLimiter } from '../middleware/rateLimit.js';
+import { chatLimiter, postLimiter, roomJoinLimiter } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
 import {
   addSongBody,
@@ -22,9 +22,9 @@ router.use(requireAuth, requireGuidelines);
 
 router.get('/', validate({ query: listRoomsQuery }), rooms.list);
 router.post('/', postLimiter, validate({ body: createRoomBody }), rooms.create);
-router.post('/quick-match', validate({ body: quickMatchBody }), rooms.quickMatch);
+router.post('/quick-match', roomJoinLimiter, validate({ body: quickMatchBody }), rooms.quickMatch);
 router.get('/:id', validate({ params: idParam }), rooms.get);
-router.post('/:id/join', validate({ params: idParam }), rooms.join);
+router.post('/:id/join', roomJoinLimiter, validate({ params: idParam }), rooms.join);
 router.post('/:id/leave', validate({ params: idParam }), rooms.leave);
 
 router.get(

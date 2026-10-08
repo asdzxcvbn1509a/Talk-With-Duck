@@ -164,6 +164,15 @@ describe.skipIf(!hasTestDb)('ระบบสมาชิกและ JWT (ตา
     });
   });
 
+  it('บัญชีทดสอบมีเฉพาะบัญชีจาก seed: บัญชีที่ผูกกับ Google แล้วสวมรอยผ่านปุ่มนี้ไม่ได้', async () => {
+    const { user: seeded } = await createUser();
+    const { user: real } = await createUser({ googleSub: 'google-sub-real-account' });
+
+    const accounts = await listDevAccounts();
+    expect(accounts.map((a) => a.id)).toEqual([seeded.id]);
+    await expect(devLogin({ userId: real.id })).rejects.toMatchObject({ status: 404 });
+  });
+
   it('อีเมลที่ผูกกับบัญชี Google อื่นอยู่แล้ว → 403', async () => {
     await createUser({ email, googleSub: 'someone-else' });
     googleAccount();

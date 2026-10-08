@@ -178,37 +178,68 @@ describe.skipIf(!hasTestDb)('Socket.IO (Signaling Server และข้อม�
   });
 
   it('คาราโอเกะ: เฉพาะ host ที่ส่งสถานะเพลงได้ ส่งมาว่าหยุดก็ยังเล่นต่อ และคนเข้าทีหลังได้สถานะล่าสุด', async () => {
-    const { hostSocket, guestSocket, roomId } = await roomWithTwo('karaoke');
+    const { host, hostSocket, guestSocket, roomId } = await roomWithTwo('karaoke');
     await hostSocket.emitWithAck('room:join', { roomId });
     await guestSocket.emitWithAck('room:join', { roomId });
+    const added = await request(server)
+      .post(`/api/rooms/${roomId}/queue`)
+      .set(bearer(host.token))
+      .send({ videoId: 'abcdefghijk', title: 'เพลงแรก' })
+      .expect(201);
+    const song = added.body.queue[0]; // เพลงแรกเล่นทันที
 
     const fromHost = nextEvent(guestSocket, 'karaoke:state');
     hostSocket.emit('karaoke:state', {
-      songId: null,
-      videoId: 'abcdefghijk',
+      songId: song.id,
+      videoId: song.videoId,
       playing: true,
       position: 42,
     });
     const state = await fromHost;
-    expect(state).toMatchObject({ videoId: 'abcdefghijk', playing: true, position: 42 });
+    expect(state).toMatchObject({
+      songId: song.id,
+      videoId: 'abcdefghijk',
+      playing: true,
+      position: 42,
+    });
     expect(typeof state.serverTime).toBe('number');
 
     // ไม่มีใครหยุดเพลงได้: host ส่งมาว่าหยุด คนอื่นก็ยังได้สถานะว่ากำลังเล่น
+    // รหัสวิดีโอเอาจากคิวเสมอ (host สั่งให้ทุกคนเล่นวิดีโออื่นไม่ได้) และตำแหน่งที่ไม่ใช่ตัวเลขจริงเป็น 0
     const stillPlaying = nextEvent(guestSocket, 'karaoke:state');
     hostSocket.emit('karaoke:state', {
-      songId: null,
-      videoId: 'abcdefghijk',
+      songId: song.id,
+      videoId: 'zzzzzzzzzzz',
       playing: false,
-      position: 50,
+      position: 'Infinity',
     });
-    expect(await stillPlaying).toMatchObject({ playing: true, position: 50 });
+    expect(await stillPlaying).toMatchObject({
+      videoId: 'abcdefghijk',
+      playing: true,
+      position: 0,
+    });
 
+    // สถานะของเพลงที่ไม่ได้เล่นอยู่ (เช่น เพิ่งข้ามไป) ไม่ถูกส่งต่อ
+    const staleIgnored = noEvent(guestSocket, 'karaoke:state');
+    hostSocket.emit('karaoke:state', {
+      songId: '00000000-0000-4000-8000-000000000000',
+      videoId: 'abcdefghijk',
+      position: 5,
+    });
+    await staleIgnored;
+
+    // คนที่ไม่ใช่ host ส่งสถานะมาไม่มีผล
     const ignored = noEvent(hostSocket, 'karaoke:state');
-    guestSocket.emit('karaoke:state', { videoId: 'zzzzzzzzzzz', playing: false, position: 0 });
+    guestSocket.emit('karaoke:state', {
+      songId: song.id,
+      videoId: 'zzzzzzzzzzz',
+      playing: false,
+      position: 0,
+    });
     await ignored;
 
     const latest = await guestSocket.emitWithAck('karaoke:request-state', {});
-    expect(latest.videoId).toBe('abcdefghijk');
+    expect(latest).toMatchObject({ songId: song.id, videoId: 'abcdefghijk', position: 0 });
 
     const serverTime = await guestSocket.emitWithAck('time:sync', {});
     expect(Math.abs(serverTime - Date.now())).toBeLessThan(1000);
@@ -351,5 +382,59 @@ describe.skipIf(!hasTestDb)('Socket.IO (Signaling Server และข้อม�
       .send({ action: 'dismiss' })
       .expect(204);
     expect(await reviewed).toEqual({ targetType: 'question', targetId });
+  });
+
+  it('ข้อมูลผิดรูปแบบทาง socket (payload null, ack ที่ไม่ใช่ฟังก์ชัน) ไม่ทำให้ server ล่ม', async () => {
+    // error ที่หลุดจาก listener ของ socket.io = process ของ server จบทันที (ทุกห้องหลุด)
+    const crashes = [];
+    const onCrash = (err) => crashes.push(err);
+    process.on('uncaughtException', onCrash);
+    process.on('unhandledRejection', onCrash);
+    try {
+      const { hostSocket, guestSocket, roomId } = await roomWithTwo('karaoke');
+      await hostSocket.emitWithAck('room:join', { roomId });
+      const outsider = await connected(socketFor((await createUser()).token));
+
+      // room:leave อยู่ท้ายสุด: host จะได้ลองทุก event ตอนที่ยังอยู่ในห้อง
+      const events = [
+        'signal',
+        'room:join',
+        'room:mute',
+        'room:kick',
+        'karaoke:state',
+        'karaoke:request-state',
+        'time:sync',
+        'lobby:subscribe',
+        'lobby:unsubscribe',
+        'room:leave',
+      ];
+      for (const socket of [hostSocket, outsider]) {
+        for (const event of events) {
+          socket.emit(event, null);
+          socket.emit(event, {}, 'ไม่ใช่ฟังก์ชัน');
+          socket.emit(event, null, 42);
+        }
+      }
+      // รอให้ handler ที่ต้องอ่านฐานข้อมูลทำงานจนจบ
+      await new Promise((r) => setTimeout(r, 500));
+
+      expect(await guestSocket.emitWithAck('time:sync', {})).toEqual(expect.any(Number));
+      expect(await outsider.emitWithAck('room:join', null)).toEqual({
+        ok: false,
+        code: 'BAD_REQUEST',
+      });
+    } finally {
+      process.off('uncaughtException', onCrash);
+      process.off('unhandledRejection', onCrash);
+    }
+    expect(crashes).toEqual([]);
+  });
+
+  it('payload ที่ใหญ่เกิน 100 KB ถูกตัดการเชื่อมต่อ', async () => {
+    const user = await createUser();
+    const socket = await connected(socketFor(user.token));
+    const dropped = nextEvent(socket, 'disconnect');
+    socket.emit('signal', { to: 'x', type: 'offer', data: 'x'.repeat(200 * 1024) });
+    await dropped;
   });
 });

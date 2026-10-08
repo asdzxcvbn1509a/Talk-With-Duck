@@ -61,6 +61,18 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
    | `YOUTUBE_API_KEY` | ไม่บังคับ (ข้อ 5) |
    | `TURN_*` | แนะนำ (ข้อ 6) |
 
+   **แนะนำ: `DATABASE_SSL_CA`** (ไม่อยู่ใน `render.yaml` เพิ่มเองที่เมนู **Environment**)
+   - ถ้าไม่ตั้ง การเชื่อมต่อฐานข้อมูลยังเข้ารหัสอยู่ แต่ไม่ตรวจใบรับรองของ Supabase
+   - ค่านี้คือใบรับรอง CA ของ Supabase เป็นไฟล์สาธารณะที่ทุกโปรเจกต์ใช้ร่วมกัน (Supabase Root 2021 CA ใช้ได้ถึง เม.ย. 2031) ไม่ใช่ความลับ
+   - วิธีตั้ง:
+     1. เปิด https://supabase.com/dashboard/project/_/database/settings (เลือกโปรเจกต์) → ส่วน **SSL Configuration** → **Download certificate** ได้ไฟล์ `prod-ca-2021.crt`
+     2. เปิดไฟล์ด้วย Notepad แล้วคัดลอกทั้งหมด 23 บรรทัด ตั้งแต่ `-----BEGIN CERTIFICATE-----` ถึง `-----END CERTIFICATE-----`
+     3. Render → **Environment** → เพิ่ม Key `DATABASE_SSL_CA` แล้ววางเป็น Value (ให้ขึ้นบรรทัดใหม่ตามไฟล์) → **Save and deploy** (ไม่ต้อง rebuild)
+     4. deploy เสร็จแล้วเปิด `/api/health?db` ต้องได้ `ok: true` ถ้าไม่ได้ให้ลบค่านี้ออก (ระบบกลับไปใช้แบบเดิม)
+   - ไม่ต้องกด **Enforce SSL** ที่อยู่ในส่วนเดียวกัน server เข้ารหัสอยู่แล้ว และการเปิดจะทำให้ฐานข้อมูลรีสตาร์ต
+   - ถ้าวางผิดรูปแบบ (เช่น บรรทัดต่อกันเป็นบรรทัดเดียว) server จะไม่ยอมเริ่ม deploy ขึ้น Failed พร้อมสาเหตุใน **Logs** และ Render ใช้เวอร์ชันเดิมต่อ
+   - ทดสอบเมื่อ 8 ต.ค. 2026: ใบรับรองของ Session pooler สิงคโปร์ตรวจผ่านด้วยไฟล์นี้ รวมถึงชื่อโฮสต์
+
 3. Deploy → build จะรัน `npm ci` → `prisma generate` → `prisma migrate deploy` (สร้างตารางบน Supabase)
 4. เปิด `https://<service>.onrender.com/api/health?db` ต้องได้ `{"ok":true,…}`
 
@@ -131,6 +143,8 @@ push โฟลเดอร์ `talk-with-duck/` ขึ้น repository ขอ�
 - [ ] `/api/health?ip` (เปิดผ่าน URL ของ Vercel) แสดง IP เดียวกับที่ https://api.ipify.org แสดง
   - ถ้าได้ IP ที่ขึ้นต้น `10.` หรือ `172.` แปลว่า `TRUST_PROXY` น้อยไป ให้เพิ่มใน `render.yaml` ทีละ 1 แล้ว push จนตรง (ใช้เลขน้อยที่สุดที่ทำให้ตรง)
   - ถ้าน้อยไป ผู้ใช้จำนวนมากจะถูกนับเป็น IP เดียวกัน แล้วโดนจำกัดความถี่ตอนเข้าสู่ระบบพร้อมกัน
+- [ ] security header ของหน้าเว็บ (`client/vercel.json`): `curl -sI https://<vercel-domain>/` ต้องเห็น `x-frame-options: DENY`, `content-security-policy: frame-ancestors 'none'`, `x-content-type-options: nosniff`, `referrer-policy` และ `permissions-policy` · จากนั้นปุ่ม Google และตัวเล่น YouTube ต้องยังใช้ได้
+- [ ] ไล่ checklist ความปลอดภัยตอน deploy ใน [security.md](security.md) (ข้อ 5)
 - [ ] เข้าสู่ระบบด้วยบัญชี Gmail และบัญชี `@mail.kmutt.ac.th` จริงได้ (ครั้งแรกขึ้นหน้าตั้งชื่อเล่นและเลือกน้องเป็ด)
 - [ ] ถ้าจำกัดโดเมนไว้ (`ALLOWED_EMAIL_DOMAINS=mail.kmutt.ac.th`): เข้าด้วยบัญชี Gmail ทั่วไปแล้วถูกปฏิเสธ (ค่าเริ่มต้น `*` รับทุกบัญชี)
 - [ ] หน้าเข้าสู่ระบบไม่มีส่วน "บัญชีทดสอบ" (มีเฉพาะตอนพัฒนาในเครื่อง)

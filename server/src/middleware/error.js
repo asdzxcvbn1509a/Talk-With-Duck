@@ -32,6 +32,19 @@ export const errorHandler = (err, req, res, _next) => {
       .json({ error: { code: 'INVALID_JSON', message: 'รูปแบบข้อมูลไม่ถูกต้อง' } });
   }
 
+  // body ใหญ่เกิน 100 KB (express.json) หรืออ่าน body ไม่ได้ด้วยเหตุอื่น (body-parser ให้ status 4xx มา)
+  // เป็นปัญหาของคำขอ ไม่ใช่ error ของระบบ: ตอบตาม status นั้นโดยไม่ต้องบันทึก log
+  if (err.type === 'entity.too.large') {
+    return res
+      .status(413)
+      .json({ error: { code: 'PAYLOAD_TOO_LARGE', message: 'ข้อมูลใหญ่เกินไป' } });
+  }
+  if (err.type && err.status >= 400 && err.status < 500) {
+    return res
+      .status(err.status)
+      .json({ error: { code: 'BAD_REQUEST', message: 'รูปแบบข้อมูลไม่ถูกต้อง' } });
+  }
+
   console.error(`[${req.method} ${req.originalUrl}]`, err);
   res.status(500).json({ error: { code: 'INTERNAL', message: 'ระบบขัดข้อง ลองใหม่อีกครั้งนะ' } });
 };

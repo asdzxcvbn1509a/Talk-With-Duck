@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { signAccessToken, verifyAccessToken } from '../../src/lib/jwt.js';
 import { presentAnswer, presentQuestion, publicUser } from '../../src/utils/present.js';
 import { isDevLoginEnabled } from '../../src/config/env.js';
-import { googleBody, sendMessageBody } from '../../src/schemas.js';
+import {
+  addSongBody,
+  createRoomBody,
+  googleBody,
+  sendMessageBody,
+  updateMeBody,
+} from '../../src/schemas.js';
 
 const user = { id: '11111111-1111-4111-8111-111111111111', role: 'member', year: 2 };
 
@@ -118,6 +124,38 @@ describe('schemas', () => {
     expect(sendMessageBody.safeParse({ type: 'sticker', content: 'heart' }).success).toBe(true);
     expect(sendMessageBody.safeParse({ type: 'sticker', content: '<script>' }).success).toBe(false);
     expect(sendMessageBody.safeParse({ type: 'text', content: '   ' }).success).toBe(false);
+  });
+
+  it('ชื่อเล่นและชื่อห้อง: ตัดอักขระที่มองไม่เห็น/สลับทิศทางข้อความออก แต่อีโมจิแบบรวมยังใช้ได้', () => {
+    const nicknameOf = (nickname) => updateMeBody.parse({ nickname }).nickname;
+    expect(nicknameOf('\u200Bเป็ด\u202Eน้อย\uFEFF')).toBe('เป็ดน้อย');
+    expect(nicknameOf(' เป็ด\u200Bซ่า\n ')).toBe('เป็ดซ่า');
+    // 👩\u200D💻 = 👩 + ZWJ (U+200D) + 💻
+    expect(nicknameOf('เป็ดสาย\u{1F469}\u200D\u{1F4BB}')).toBe('เป็ดสาย\u{1F469}\u200D\u{1F4BB}');
+    // เหลือตัวเดียวหลังตัดอักขระที่มองไม่เห็น = สั้นเกินไป
+    expect(updateMeBody.safeParse({ nickname: '\u200Bก\u200B' }).success).toBe(false);
+    expect(createRoomBody.parse({ name: 'ห้อง\u202Eติว\u2066', type: 'group' }).name).toBe(
+      'ห้องติว',
+    );
+    expect(createRoomBody.safeParse({ name: '\u200B\u200E', type: 'group' }).success).toBe(false);
+  });
+
+  it.each([
+    ['มีช่องว่างคั่น', 'เป็ด นิรนาม'],
+    ['แทรกอักขระที่มองไม่เห็น (ZWJ)', 'เป็ด\u200Dนิรนาม'],
+    ['ตัวพิมพ์ใหญ่', 'ADMIN'],
+    ['ตัวพิมพ์ใหญ่และช่องว่าง', 'Moder ator'],
+  ])('ชื่อสงวนที่เลี่ยงด้วยวิธี%s ยังถูกปฏิเสธ', (_label, nickname) => {
+    expect(updateMeBody.safeParse({ nickname }).success).toBe(false);
+  });
+
+  it('จองเพลงไม่รับรูปปกจาก client (server สร้างจากรหัสวิดีโอเอง)', () => {
+    const body = addSongBody.parse({
+      videoId: 'abcdefghijk',
+      title: 'เพลง',
+      thumbnail: 'https://tracker.example/pixel.gif',
+    });
+    expect(body).toEqual({ videoId: 'abcdefghijk', title: 'เพลง' });
   });
 });
 

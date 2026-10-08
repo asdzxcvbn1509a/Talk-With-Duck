@@ -1,7 +1,7 @@
 // ค้นหาเพลงบน YouTube (ผ่าน server เพื่อซ่อน API key) และแปลงลิงก์ที่ผู้ใช้วางเป็นข้อมูลเพลง
 import { env } from '../config/env.js';
 import { badRequest, unavailable } from '../utils/httpError.js';
-import { decodeHtmlEntities, parseYouTubeId } from '../utils/youtube.js';
+import { decodeHtmlEntities, parseYouTubeId, youtubeThumbnail } from '../utils/youtube.js';
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const CACHE_MAX = 200;
@@ -99,6 +99,6 @@ export const resolveLink = async (link) => {
     videoId,
     title: String(data.title ?? 'ไม่ทราบชื่อเพลง').slice(0, 200),
     channel: data.author_name ?? null,
-    thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+    thumbnail: youtubeThumbnail(videoId),
   };
 };

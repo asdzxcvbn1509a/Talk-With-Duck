@@ -80,7 +80,7 @@ export const sendMessage = async (req, res, next) => {
 
 export const getQueue = async (req, res, next) => {
   try {
-    res.json({ queue: await queueService.listQueue(req.valid.params.id) });
+    res.json({ queue: await queueService.listQueueForMember(req.valid.params.id, req.user.id) });
   } catch (err) {
     next(err);
   }

@@ -33,3 +33,9 @@ const shutdown = async (signal) => {
 
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+// กันพลาดชั้นสุดท้าย: Promise ที่ไม่มีใครจับ error ให้บันทึก log แทนการปิด server ทั้งตัว
+// (ค่าเริ่มต้นของ Node คือจบ process ทุกห้องจะหลุดพร้อมกัน) · event ของ socket จับ error ใน realtime/index.js แล้ว
+process.on('unhandledRejection', (err) => {
+  console.error('unhandledRejection', err);
+});

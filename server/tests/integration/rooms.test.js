@@ -135,6 +135,48 @@ describe.skipIf(!hasTestDb)('ห้องสนทนา 1-1 / กลุ่ม /
     expect(JSON.stringify(list.body)).not.toContain('@mail.kmutt.ac.th');
   });
 
+  it.each(['private', 'group'])(
+    'แชทห้อง %s: คนที่เข้าทีหลังไม่เห็นข้อความที่คุยกันก่อนเข้า แม้ย้อนดูด้วย before',
+    async (type) => {
+      const a = await createUser();
+      const b = await createUser();
+      const { body } = await api()
+        .post('/api/rooms')
+        .set(bearer(a.token))
+        .send({ name: 'x', type });
+      const roomId = body.room.id;
+      const send = (who, content) =>
+        api()
+          .post(`/api/rooms/${roomId}/messages`)
+          .set(bearer(who.token))
+          .send({ type: 'text', content })
+          .expect(201);
+      const contents = async (who, query = '') => {
+        const res = await api()
+          .get(`/api/rooms/${roomId}/messages${query}`)
+          .set(bearer(who.token))
+          .expect(200);
+        return res.body.messages.map((m) => m.content);
+      };
+
+      await send(a, 'คุยก่อนมีคนเข้า');
+      await api().post(`/api/rooms/${roomId}/join`).set(bearer(b.token)).expect(200);
+      await send(a, 'คุยหลังเข้า');
+
+      expect(await contents(b)).toEqual(['คุยหลังเข้า']);
+      const later = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      expect(await contents(b, `?before=${later}`)).toEqual(['คุยหลังเข้า']);
+      // คนที่อยู่ในห้องตั้งแต่แรกยังเห็นครบ
+      expect(await contents(a)).toEqual(['คุยก่อนมีคนเข้า', 'คุยหลังเข้า']);
+
+      // ออกแล้วเข้าใหม่: เห็นเฉพาะข้อความหลังเข้ารอบล่าสุด
+      await api().post(`/api/rooms/${roomId}/leave`).set(bearer(b.token)).expect(204);
+      await send(a, 'คุยตอนที่ b ไม่อยู่');
+      await api().post(`/api/rooms/${roomId}/join`).set(bearer(b.token)).expect(200);
+      expect(await contents(b)).toEqual([]);
+    },
+  );
+
   it('quick-match จับคู่คนที่รออยู่ในห้อง 1-1', async () => {
     const a = await createUser();
     const b = await createUser();
@@ -222,5 +264,40 @@ describe.skipIf(!hasTestDb)('คิวเพลง Duck Karaoke Lounge (ตา�
       .set(bearer(u.token))
       .send(song(1));
     expect(res.body.error.code).toBe('NOT_KARAOKE_ROOM');
+  });
+
+  it('รูปปกเพลงสร้างจากรหัสวิดีโอที่ server ไม่ใช้ URL ที่ส่งมา', async () => {
+    const host = await createUser();
+    const { body } = await api()
+      .post('/api/rooms')
+      .set(bearer(host.token))
+      .send({ name: 'ร้องเพลง', type: 'karaoke' });
+    const res = await api()
+      .post(`/api/rooms/${body.room.id}/queue`)
+      .set(bearer(host.token))
+      .send({ ...song(1), thumbnail: 'https://tracker.example/pixel.gif' })
+      .expect(201);
+    expect(res.body.queue[0].thumbnail).toBe('https://i.ytimg.com/vi/abcdefghij1/mqdefault.jpg');
+  });
+
+  it('คิวเพลงอ่านได้เฉพาะคนในห้อง', async () => {
+    const host = await createUser();
+    const outsider = await createUser();
+    const { body } = await api()
+      .post('/api/rooms')
+      .set(bearer(host.token))
+      .send({ name: 'ร้องเพลง', type: 'karaoke' });
+    const roomId = body.room.id;
+    await api()
+      .post(`/api/rooms/${roomId}/queue`)
+      .set(bearer(host.token))
+      .send(song(1))
+      .expect(201);
+
+    const denied = await api().get(`/api/rooms/${roomId}/queue`).set(bearer(outsider.token));
+    expect(denied.status).toBe(403);
+    expect(denied.body.error.code).toBe('NOT_A_MEMBER');
+    const queue = await api().get(`/api/rooms/${roomId}/queue`).set(bearer(host.token)).expect(200);
+    expect(queue.body.queue).toHaveLength(1);
   });
 });

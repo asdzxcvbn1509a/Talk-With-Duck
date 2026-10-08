@@ -57,4 +57,19 @@ export default [
       ],
     },
   },
+  {
+    // event จาก client รับผ่าน listen() ใน realtime/index.js เท่านั้น: ตัดข้อมูลผิดรูปแบบและจับ error ให้
+    // (error ที่หลุดจาก listener ของ socket.io ทำให้ server ล่มทั้งตัว)
+    files: ['src/realtime/**/*.js'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...restrictedSyntax,
+        {
+          selector: "CallExpression[callee.object.name='socket'][callee.property.name='on']",
+          message: 'รับ event จาก client ด้วย listen(socket, event, handler) แทน socket.on',
+        },
+      ],
+    },
+  },
 ];

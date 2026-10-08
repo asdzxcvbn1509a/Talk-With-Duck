@@ -82,11 +82,8 @@ const SongSearch = ({ roomId }) => {
   const add = async (song) => {
     setAddingId(song.videoId);
     try {
-      await addSong(roomId, {
-        videoId: song.videoId,
-        title: song.title,
-        thumbnail: song.thumbnail,
-      });
+      // ไม่ส่งรูปปก: server สร้างจากรหัสวิดีโอเอง (ไม่รับ URL รูปจากหน้าเว็บ)
+      await addSong(roomId, { videoId: song.videoId, title: song.title });
       toast(`จอง “${song.title}” เข้าคิวแล้ว`, 'success');
       setResults([]);
       setQuery('');

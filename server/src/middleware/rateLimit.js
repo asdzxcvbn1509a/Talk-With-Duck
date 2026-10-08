@@ -25,3 +25,6 @@ export const authLimiter = limiter({ windowMs: 15 * 60 * 1000, limit: 30 });
 export const chatLimiter = limiter({ windowMs: 10 * 1000, limit: 15, byUser: true });
 // ตั้งกระทู้/ตอบ/รายงาน/ค้นหาเพลง
 export const postLimiter = limiter({ windowMs: 60 * 1000, limit: 20, byUser: true });
+// เข้าห้อง/สุ่มคุย 1-1: ทุกครั้งแจ้งทุกคนที่เปิดหน้า lobby อยู่ (สุ่มคุยยังเปิดห้องใหม่ได้ด้วย)
+// ใช้งานจริงไม่ถึงนาทีละ 30 ครั้ง ที่เกินคือการกดรัว ๆ หรือสคริปต์
+export const roomJoinLimiter = limiter({ windowMs: 60 * 1000, limit: 30, byUser: true });

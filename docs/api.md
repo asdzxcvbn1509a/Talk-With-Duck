@@ -10,7 +10,7 @@ Base URL: `/api` · รูปแบบ JSON · ★ = เพิ่มจากต
 - 🦆 ต้องล็อกอินและยอมรับข้อตกลงแล้ว
 - 🛡️ เฉพาะผู้ดูแล
 
-**รูปแบบ error:** `{ "error": { "code": "ROOM_FULL", "message": "ห้องเต็มแล้ว…" } }` โดย `message` เป็นภาษาไทยพร้อมแสดงผู้ใช้
+**รูปแบบ error:** `{ "error": { "code": "ROOM_FULL", "message": "ห้องเต็มแล้ว…" } }` โดย `message` เป็นภาษาไทยพร้อมแสดงผู้ใช้ · body ใหญ่เกิน 100 KB ได้ 413 `PAYLOAD_TOO_LARGE`
 
 **ฝั่งหน้าเว็บ:** ทุก endpoint ด้านล่างมีฟังก์ชันเรียกใช้ใน `client/src/api/<กลุ่ม>.js` ตามหัวข้อ
 - Auth → `auth.js`
@@ -36,8 +36,8 @@ Base URL: `/api` · รูปแบบ JSON · ★ = เพิ่มจากต
 | POST | `/auth/google` ★ | 🔓 | `credential` (ID token จากปุ่ม Google), `profile?: { nickname, year(1–4), avatar }` | บัญชีเดิม: `{ user, accessToken }` + cookie · บัญชีใหม่ที่ยังไม่ส่ง `profile`: `{ needsProfile: true, email }` · ส่ง `profile` แล้ว: 201 + session |
 | POST | `/auth/refresh` | cookie | – | `{ user, accessToken }` + cookie ใหม่ (หมุน token) · ไม่มี cookie (ยังไม่ได้เข้าสู่ระบบ): 204 · cookie ใช้ไม่ได้: 401 `SESSION_EXPIRED` และลบ cookie |
 | POST | `/auth/logout` ★ | cookie | – | 204 · เพิกถอน refresh token |
-| GET | `/auth/dev-accounts` ★ | 🔓 dev | – | `{ accounts }` บัญชีทดสอบ |
-| POST | `/auth/dev-login` ★ | 🔓 dev | `userId` | `{ user, accessToken }` + cookie |
+| GET | `/auth/dev-accounts` ★ | 🔓 dev | – | `{ accounts }` บัญชีทดสอบ (เฉพาะบัญชีจาก seed) |
+| POST | `/auth/dev-login` ★ | 🔓 dev | `userId` | `{ user, accessToken }` + cookie · บัญชีที่ผูก Google แล้วได้ 404 |
 
 **เข้าสู่ระบบด้วย Google:** server ตรวจลายเซ็นของ ID token และ audience ต้องเป็น `GOOGLE_CLIENT_ID` จากนั้นต้องผ่านเงื่อนไขทั้งหมด
 - `email_verified` เป็นจริง
@@ -55,7 +55,7 @@ error อื่น:
 - แถวที่สมัครค้างไว้แต่ไม่เคยยืนยันอีเมล (จากระบบ OTP เดิม) ไม่นับเป็นบัญชี
   - เจ้าของอีเมลต้องตั้งโปรไฟล์ใหม่
   - ระบบใช้แถวเดิมแต่แทนข้อมูลทั้งหมด และเพิกถอน session เก่า
-- ปุ่มบัญชีทดสอบก็แสดงเฉพาะบัญชีที่ยืนยันแล้ว
+- ปุ่มบัญชีทดสอบแสดงเฉพาะบัญชีจาก seed คือยืนยันอีเมลแล้วแต่ยังไม่ผูกกับ Google (`google_sub` ว่าง) บัญชีจริงที่เคยเข้าด้วย Google จึงถูกสวมรอยผ่านปุ่มนี้ไม่ได้ แม้เปิด server ตอน dev ให้คนในวง Wi-Fi เดียวกันเรียกได้ (`npm run dev:https`)
 
 **🔓 dev:** มี route นี้เฉพาะเมื่อตั้ง `DEV_LOGIN=true` และ `NODE_ENV=development` ตอนเทสต์และบนเว็บจริงจะได้ 404 เสมอ
 
@@ -81,14 +81,14 @@ error อื่น:
 |---|---|---|---|
 | GET | `/rooms?type=&year=` | 🦆 | ห้องที่เปิดอยู่ กรองตามประเภท (`private`/`group`/`karaoke`) และชั้นปี · แต่ละห้องมี `nowPlaying` (ชื่อเพลงที่กำลังเล่นในห้องคาราโอเกะ ไม่มีเพลง = `null`) |
 | POST | `/rooms` | 🦆 | `name, type, yearFilter?` → สร้างห้องแล้วใส่ผู้สร้างเป็น host |
-| POST | `/rooms/quick-match` ★ | 🦆 | `year?` → เข้าห้อง 1-1 ที่มีคนรอ ถ้าไม่มีสร้างใหม่ |
+| POST | `/rooms/quick-match` ★ | 🦆 | `year?` → เข้าห้อง 1-1 ที่มีคนรอ ถ้าไม่มีสร้างใหม่ · นับรวมกับ join ไม่เกินนาทีละ 30 ครั้งต่อคน (429) |
 | GET | `/rooms/:id` ★ | 🦆 | ข้อมูลห้อง + สมาชิก |
-| POST | `/rooms/:id/join` | 🦆 | ตรวจจำนวนคนในห้อง (ล็อกแถว) · 409 `ROOM_FULL` · 404 `ROOM_CLOSED` · 403 `ROOM_KICKED` (เจ้าของห้องเคยเชิญออก) |
+| POST | `/rooms/:id/join` | 🦆 | ตรวจจำนวนคนในห้อง (ล็อกแถว) · 409 `ROOM_FULL` · 404 `ROOM_CLOSED` · 403 `ROOM_KICKED` (เจ้าของห้องเคยเชิญออก) · นับรวมกับ quick-match ไม่เกินนาทีละ 30 ครั้งต่อคน (429) |
 | POST | `/rooms/:id/leave` ★ | 🦆 | 204 |
-| GET | `/rooms/:id/messages?before=` ★ | 🦆 สมาชิก | 50 ข้อความล่าสุด |
+| GET | `/rooms/:id/messages?before=` ★ | 🦆 สมาชิก | 50 ข้อความล่าสุด เฉพาะที่ส่งหลังจากผู้ขอเข้าห้อง (คนที่เข้าทีหลังไม่เห็นข้อความก่อนหน้า ออกแล้วเข้าใหม่นับใหม่) |
 | POST | `/rooms/:id/messages` ★ | 🦆 สมาชิก | `{ type: 'text', content }` หรือ `{ type: 'sticker', content: 'heart' }` |
-| GET | `/rooms/:id/queue` ★ | 🦆 | คิวเพลง (กำลังเล่นอยู่บนสุด) |
-| POST | `/rooms/:id/queue` ★ | 🦆 สมาชิก | `videoId, title, thumbnail?` · จองได้ไม่เกิน 5 เพลงต่อคน |
+| GET | `/rooms/:id/queue` ★ | 🦆 สมาชิก | คิวเพลง (กำลังเล่นอยู่บนสุด) |
+| POST | `/rooms/:id/queue` ★ | 🦆 สมาชิก | `videoId, title` · จองได้ไม่เกิน 5 เพลงต่อคน · server สร้าง `thumbnail` จาก `videoId` เอง (ไม่รับ URL รูปจาก client) |
 | POST | `/rooms/:id/queue/next` ★ | 🦆 host | `reason: done/skipped` |
 | DELETE | `/rooms/:id/queue/:songId` ★ | 🦆 เจ้าของเพลง/host | |
 

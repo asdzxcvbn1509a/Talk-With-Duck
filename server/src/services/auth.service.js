@@ -93,11 +93,13 @@ export const signInWithGoogle = async ({ credential, profile }) => {
 };
 
 // ---------- บัญชีทดสอบ (route มีเฉพาะเมื่อ env.devLogin ดู routes/auth.routes.js) ----------
-// ใช้ได้เฉพาะบัญชีที่ยืนยันอีเมลแล้ว (บัญชีจาก seed หรือที่เคยเข้าด้วย Google)
+// ใช้ได้เฉพาะบัญชีจาก seed: ยืนยันอีเมลแล้วแต่ไม่ได้ผูกกับบัญชี Google (googleSub = null)
+// บัญชีจริงที่เคยเข้าด้วย Google สวมรอยผ่านปุ่มนี้ไม่ได้ แม้ server ตอน dev จะเปิดให้คนในวง Wi-Fi เดียวกันเรียก
+// (npm run dev:https ใช้ --host) และถ้า DEV_LOGIN หลุดไปเปิดบนเว็บจริงก็ไม่มีบัญชีให้สวมรอย
 
 export const listDevAccounts = async () => {
   return prisma.user.findMany({
-    where: { isBanned: false, emailVerifiedAt: { not: null } },
+    where: { isBanned: false, emailVerifiedAt: { not: null }, googleSub: null },
     orderBy: [{ role: 'desc' }, { year: 'asc' }, { createdAt: 'asc' }],
     take: 20,
     select: { id: true, email: true, nickname: true, avatar: true, year: true, role: true },
@@ -106,7 +108,7 @@ export const listDevAccounts = async () => {
 
 export const devLogin = async ({ userId }) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user?.emailVerifiedAt) throw notFound('USER_NOT_FOUND', 'ไม่พบบัญชีนี้');
+  if (!user?.emailVerifiedAt || user.googleSub) throw notFound('USER_NOT_FOUND', 'ไม่พบบัญชีนี้');
   assertNotBanned(user);
   return { user, ...(await issueSession(user)) };
 };

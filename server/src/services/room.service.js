@@ -253,13 +253,22 @@ export const listActiveMemberships = () => {
   });
 };
 
-/** ผู้ใช้คนนี้เป็นเจ้าของห้องคาราโอเกะที่ยังเปิดอยู่ไหม (ใช้ตรวจ karaoke:state ที่ส่งมาทาง socket) */
-export const isKaraokeHost = async (roomId, userId) => {
+/**
+ * เพลงที่กำลังเล่น { id, videoId } ถ้าผู้ใช้คนนี้เป็นเจ้าของห้องคาราโอเกะที่ยังเปิดอยู่ (ใช้ตรวจ karaoke:state ที่ส่งมาทาง socket)
+ * ไม่ใช่เจ้าของห้อง ห้องปิดแล้ว หรือยังไม่มีเพลงเล่น = null
+ */
+export const hostPlayingSong = async (roomId, userId) => {
   const room = await prisma.room.findUnique({
     where: { id: roomId },
-    select: { hostId: true, type: true, isActive: true },
+    select: {
+      hostId: true,
+      type: true,
+      isActive: true,
+      songs: { where: { status: 'playing' }, select: { id: true, videoId: true }, take: 1 },
+    },
   });
-  return Boolean(room?.isActive && room.type === 'karaoke' && room.hostId === userId);
+  if (!room?.isActive || room.type !== 'karaoke' || room.hostId !== userId) return null;
+  return room.songs[0] ?? null;
 };
 
 /** ผู้ดูแลปิดห้องที่ถูกรายงาน */

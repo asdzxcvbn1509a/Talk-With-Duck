@@ -17,6 +17,14 @@ describe('/api/health และเส้นทางที่ไม่มีอ�
     const res = await api().get('/api/no-such-path').expect(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
+
+  it('body ใหญ่เกิน 100 KB ได้ 413 ไม่ใช่ error ของระบบ (500)', async () => {
+    const res = await api()
+      .post('/api/auth/google')
+      .send({ credential: 'x'.repeat(150 * 1024) })
+      .expect(413);
+    expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
+  });
 });
 
 describe.skipIf(!hasTestDb)('/api/health?db และ /api/rtc/ice-servers', () => {

@@ -1,6 +1,7 @@
+import fs from 'node:fs';
 import pg from 'pg';
 import { describe, expect, it } from 'vitest';
-import { withoutSslMode } from '../../src/utils/databaseUrl.js';
+import { isPemCertificate, withoutSslMode } from '../../src/utils/databaseUrl.js';
 import { isAllowedEmail, normalizeEmail, parseEmailDomains } from '../../src/utils/emailDomain.js';
 import { parseYouTubeId, decodeHtmlEntities } from '../../src/utils/youtube.js';
 import { hmac } from '../../src/lib/crypto.js';
@@ -66,6 +67,20 @@ describe('databaseUrl', () => {
     });
     expect(client.ssl).toEqual(ssl);
     expect(client.password).toBe('pa$s@w0rd');
+  });
+
+  it('DATABASE_SSL_CA: รับใบรับรอง PEM ทั้งก้อน ปฏิเสธค่าที่วางผิดรูปแบบ', () => {
+    // ใบรับรอง CA สาธารณะของ Supabase (ไฟล์ที่ดาวน์โหลดจากหน้า Database Settings)
+    const fixture = new URL('../fixtures/supabase-prod-ca-2021.crt', import.meta.url);
+    const lines = fs.readFileSync(fixture, 'utf8').trim().split(/\r?\n/);
+
+    expect(isPemCertificate(lines.join('\n'))).toBe(true);
+    expect(isPemCertificate(lines.join('\r\n'))).toBe(true);
+    // บรรทัดถูกต่อกันเป็นบรรทัดเดียว · \n เป็นตัวอักษร · ไม่มีบรรทัด BEGIN/END
+    expect(isPemCertificate(lines.join(' '))).toBe(false);
+    expect(isPemCertificate(lines.join('\\n'))).toBe(false);
+    expect(isPemCertificate(lines.slice(1, -1).join('\n'))).toBe(false);
+    expect(isPemCertificate('not a certificate')).toBe(false);
   });
 });
 

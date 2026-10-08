@@ -27,6 +27,13 @@ export const parseYouTubeId = (input) => {
   return id && ID_RE.test(id) ? id : null;
 };
 
+/**
+ * รูปปกของวิดีโอจากเซิร์ฟเวอร์รูปของ YouTube (ขนาดเดียวกับผลค้นหา)
+ * server สร้างเองจากรหัสวิดีโอเสมอ ไม่รับ URL รูปจาก client: ไม่งั้นคนจองเพลงใส่ URL ของตัวเองได้
+ * แล้วทุกคนในห้องจะโหลดรูปจากที่นั้น (เจ้าของ URL เห็น IP ของทุกคน และแสดงรูปอะไรก็ได้)
+ */
+export const youtubeThumbnail = (videoId) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+
 /** แปลง &amp; &#39; ฯลฯ ที่ YouTube Data API ส่งมาในชื่อเพลง */
 export const decodeHtmlEntities = (text) => {
   return String(text ?? '')

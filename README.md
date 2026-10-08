@@ -229,7 +229,7 @@ server/
     config/       env (ตรวจค่าใน .env ตอนเริ่ม), ค่าคงที่
     schemas.js    รูปแบบข้อมูลที่แต่ละ endpoint รับ (zod)
   tests/          unit + integration (ใช้ฐานข้อมูล talkwithduck_test)
-docs/             architecture.md · database.md · api.md · socket-events.md · deploy.md · test-plan.md · report-changes.md
+docs/             architecture.md · database.md · api.md · socket-events.md · deploy.md · security.md · test-plan.md · report-changes.md
 ```
 
 ## เอกสารเพิ่มเติม
@@ -239,5 +239,6 @@ docs/             architecture.md · database.md · api.md · socket-events.md �
 - [docs/api.md](docs/api.md): REST API ทั้งหมด
 - [docs/socket-events.md](docs/socket-events.md): event ของ Socket.IO และลำดับการต่อ WebRTC
 - [docs/deploy.md](docs/deploy.md): ขั้นตอนนำขึ้น Supabase + Render + Vercel
+- [docs/security.md](docs/security.md): ระบบป้องกันอะไรไว้แล้ว ผลการตรวจความปลอดภัย ความเสี่ยงที่ยอมรับ และกติกาเวลาเพิ่มโค้ด
 - [docs/test-plan.md](docs/test-plan.md): แผนทดสอบตามตาราง 3.5
 - [docs/report-changes.md](docs/report-changes.md): สิ่งที่ต่างจากรูปเล่ม (ใช้แก้บทที่ 3–4)

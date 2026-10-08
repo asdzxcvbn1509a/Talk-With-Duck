@@ -29,15 +29,20 @@ Socket.IO บน Express ทำหน้าที่เป็น Signaling Serve
 
 ## Client → Server
 
+**ข้อมูลที่ส่งมาทุก event** (ตรวจที่ `listen()` ใน `server/src/realtime/index.js`):
+- payload ที่ไม่ใช่ object (เช่น `null`) ถือเป็น `{}` และ ack ใช้ได้เฉพาะเมื่อ client ขอ ack มาจริง (ส่งมาผิดรูปแบบ server ไม่ล่ม)
+- ส่งได้ไม่เกิน 100 KB ต่อครั้ง เกินแล้วถูกตัดการเชื่อมต่อ (SDP/ICE จริงไม่กี่ KB)
+- error ที่ตั้งใจตอบได้ `{ ok:false, code, message }` ส่วน error อื่นของระบบได้แค่ `{ ok:false, code: 'INTERNAL' }` ไม่บอกรายละเอียดภายใน
+
 | Event | Payload | Ack | หมายเหตุ |
 |---|---|---|---|
 | `lobby:subscribe` / `lobby:unsubscribe` | – | – | รับการอัปเดตรายการห้อง |
-| `room:join` | `{ roomId }` | `{ ok, room, messages, queue, karaoke, peers, online }` หรือ `{ ok:false, code }` | ต้องเป็นสมาชิก (เรียก REST join ก่อน) |
+| `room:join` | `{ roomId }` | `{ ok, room, messages, queue, karaoke, peers, online }` หรือ `{ ok:false, code }` | ต้องเป็นสมาชิก (เรียก REST join ก่อน) · `messages` มีเฉพาะข้อความตั้งแต่ตอนที่เข้าห้อง |
 | `room:leave` | `{}` | `{ ok }` | ออกจากห้องทันที |
 | `room:mute` | `{ muted }` | – | บันทึกสถานะไมค์ |
 | `room:kick` | `{ userId }` | `{ ok }` หรือ `{ ok:false, code, message }` | เจ้าของห้องเชิญคนออก (ห้องกลุ่ม/คาราโอเกะเท่านั้น) · คนนั้นกลับเข้าห้องเดิมไม่ได้ (REST join ได้ 403 `ROOM_KICKED`) · เพลงที่เขาจองไว้แต่ยังไม่เล่นออกจากคิว · code: `HOST_ONLY`, `KICK_NOT_ALLOWED` (ห้อง 1-1), `CANNOT_KICK_SELF`, `MEMBER_NOT_FOUND`, `ROOM_CLOSED` |
 | `signal` | `{ to: socketId, type: 'offer'/'answer'/'ice', data }` | – | server ส่งต่อเฉพาะเมื่ออยู่ห้องเดียวกัน |
-| `karaoke:state` | `{ songId, videoId, playing, position }` | – | รับจาก host เท่านั้น · host ส่งตอนเพลงเริ่มเล่นและทุก 4 วินาที · server เก็บ `playing: true` เสมอ (ไม่มีใครหยุดเพลงได้) |
+| `karaoke:state` | `{ songId, videoId, playing, position }` | – | รับจาก host เท่านั้น · host ส่งตอนเพลงเริ่มเล่นและทุก 4 วินาที · `songId` ต้องเป็นเพลงที่กำลังเล่นในคิว (เพลงอื่นไม่ส่งต่อ) · server ใช้ `videoId` จากคิวเสมอ ไม่ใช้ค่าที่ส่งมา · `position` ที่ไม่ใช่ตัวเลขจริงเป็น 0 · เก็บ `playing: true` เสมอ (ไม่มีใครหยุดเพลงได้) |
 | `karaoke:request-state` | `{}` | สถานะล่าสุด | |
 | `time:sync` | `{}` | เวลา server (ms) | ใช้คำนวณความต่างของนาฬิกา |
 

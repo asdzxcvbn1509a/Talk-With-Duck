@@ -5,6 +5,7 @@ import { clearKaraokeState } from '../realtime/karaokeState.js';
 import { emitToRoom } from '../realtime/hub.js';
 import { presentSong, publicUserSelect } from '../utils/present.js';
 import { badRequest, forbidden, notFound, tooMany } from '../utils/httpError.js';
+import { youtubeThumbnail } from '../utils/youtube.js';
 import { assertActiveMember, broadcastRoomSummary, roomClosed } from './room.service.js';
 
 const include = { requester: { select: publicUserSelect } };
@@ -19,6 +20,12 @@ export const listQueue = async (roomId) => {
   return songs
     .sort((a, b) => (a.status === 'playing' ? -1 : b.status === 'playing' ? 1 : 0))
     .map(presentSong);
+};
+
+/** คิวเพลงสำหรับ GET /rooms/:id/queue: อ่านได้เฉพาะคนในห้อง แบบเดียวกับข้อความแชท */
+export const listQueueForMember = async (roomId, userId) => {
+  await assertActiveMember(roomId, userId);
+  return listQueue(roomId);
 };
 
 const broadcastQueue = async (roomId) => {
@@ -52,7 +59,7 @@ const advance = async (roomId, finishedStatus) => {
   clearKaraokeState(roomId);
 };
 
-export const addSong = async (roomId, userId, { videoId, title, thumbnail }) => {
+export const addSong = async (roomId, userId, { videoId, title }) => {
   await getKaraokeRoom(roomId);
   await assertActiveMember(roomId, userId);
 
@@ -73,7 +80,8 @@ export const addSong = async (roomId, userId, { videoId, title, thumbnail }) => 
       roomId,
       videoId,
       songTitle: title,
-      thumbnail: thumbnail ?? null,
+      // สร้างจากรหัสวิดีโอ ไม่ใช้ URL ที่ client ส่งมา (ดู youtubeThumbnail)
+      thumbnail: youtubeThumbnail(videoId),
       requestedBy: userId,
       orderNo: (last._max.orderNo ?? 0) + 1,
       // ถ้ายังไม่มีเพลงเล่นอยู่ เพลงแรกขึ้นเล่นทันที

@@ -2,12 +2,23 @@
 import { z } from 'zod';
 import { AVATAR_KEYS, LIMITS, RESERVED_NICKNAMES, STICKER_KEYS } from './config/constants.js';
 
+// อักขระที่มองไม่เห็นหรือสลับทิศทางข้อความ (zero-width, RTL override ฯลฯ) ใช้ปลอมชื่อให้ดูเหมือนชื่ออื่นได้
+// เช่น "เป็ดนิรนาม" ต่อท้ายด้วยอักขระที่มองไม่เห็น · ตัดออกจากชื่อเล่นและชื่อห้องก่อนตรวจความยาว
+// เว้น U+200D (ZWJ) ไว้ อีโมจิที่ประกอบจากหลายตัวจึงยังใช้ได้
+const INVISIBLE_RE =
+  /[\p{Cc}\u00AD\u061C\u200B\u200C\u200E\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/gu;
+const stripInvisible = (v) => v.replace(INVISIBLE_RE, '');
+// เทียบชื่อสงวนโดยไม่สนช่องว่าง อักขระที่มองไม่เห็น และตัวพิมพ์เล็ก/ใหญ่ ("เป็ด นิรนาม" = "เป็ดนิรนาม")
+const reservedKey = (v) => v.replace(/[\s\p{Cf}]/gu, '').toLowerCase();
+const RESERVED_KEYS = new Set(RESERVED_NICKNAMES.map(reservedKey));
+
 const nickname = z
   .string()
+  .overwrite(stripInvisible)
   .trim()
   .min(LIMITS.nicknameMin, `ชื่อเล่นต้องยาว ${LIMITS.nicknameMin}–${LIMITS.nicknameMax} ตัวอักษร`)
   .max(LIMITS.nicknameMax, `ชื่อเล่นต้องยาว ${LIMITS.nicknameMin}–${LIMITS.nicknameMax} ตัวอักษร`)
-  .refine((v) => !RESERVED_NICKNAMES.includes(v.toLowerCase()), 'ชื่อเล่นนี้สงวนไว้ ลองชื่ออื่นนะ');
+  .refine((v) => !RESERVED_KEYS.has(reservedKey(v)), 'ชื่อเล่นนี้สงวนไว้ ลองชื่ออื่นนะ');
 const year = z.coerce.number().int().min(1, 'เลือกชั้นปี 1–4').max(4, 'เลือกชั้นปี 1–4');
 const avatar = z.enum(AVATAR_KEYS, 'เลือกอวาตาร์เป็ดจากรายการ');
 const optionalYear = z.preprocess(
@@ -37,7 +48,12 @@ export const updateMeBody = z
 export const roomType = z.enum(['private', 'group', 'karaoke']);
 export const listRoomsQuery = z.object({ type: roomType.optional(), year: optionalYear });
 export const createRoomBody = z.object({
-  name: z.string().trim().min(1, 'ตั้งชื่อห้องก่อนนะ').max(LIMITS.roomNameMax, 'ชื่อห้องยาวเกินไป'),
+  name: z
+    .string()
+    .overwrite(stripInvisible)
+    .trim()
+    .min(1, 'ตั้งชื่อห้องก่อนนะ')
+    .max(LIMITS.roomNameMax, 'ชื่อห้องยาวเกินไป'),
   type: roomType,
   yearFilter: year.nullable().optional(),
 });
@@ -60,10 +76,10 @@ export const searchQuery = z.object({
   q: z.string().trim().min(1, 'พิมพ์ชื่อเพลงก่อนนะ').max(LIMITS.searchMax),
 });
 export const resolveBody = z.object({ url: z.string().trim().min(1).max(300) });
+// ไม่รับรูปปกจาก client: server สร้างจากรหัสวิดีโอเอง (utils/youtube.js youtubeThumbnail)
 export const addSongBody = z.object({
   videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/, 'รหัสวิดีโอไม่ถูกต้อง'),
   title: z.string().trim().min(1).max(200),
-  thumbnail: z.url().max(500).optional().nullable(),
 });
 export const songParams = z.object({ id: z.uuid(), songId: z.uuid() });
 export const nextSongBody = z.object({ reason: z.enum(['done', 'skipped']).default('done') });

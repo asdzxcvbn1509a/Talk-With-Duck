@@ -1,5 +1,5 @@
-// นโยบายความเป็นส่วนตัว: บอกสิ่งที่ไม่เก็บ (ชื่อจริง เสียง) · ลิงก์กลับตามสถานะการเข้าสู่ระบบ
-// · ช่องทางติดต่อทีมแสดงเฉพาะเมื่อทีมตั้งค่าไว้
+// นโยบายความเป็นส่วนตัว: บอกสิ่งที่ไม่เก็บ (ชื่อจริง เสียง) · ใครเห็นอะไร (แชทเฉพาะหลังเข้าห้อง, IP ในห้องเสียง)
+// · ลิงก์กลับตามสถานะการเข้าสู่ระบบ · ช่องทางติดต่อทีมแสดงเฉพาะเมื่อทีมตั้งค่าไว้
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -30,6 +30,12 @@ describe('PrivacyPage', () => {
       '/login',
     );
     expect(screen.queryByRole('link', { name: /ติดต่อทีมผู้ดูแล/ })).toBeNull();
+  });
+
+  it('บอกว่าคนที่เข้าห้องทีหลังไม่เห็นแชทก่อนหน้า และคนในห้องเสียงเห็น IP ของกัน', () => {
+    renderPrivacy();
+    expect(screen.getByText(/คนที่เข้ามาทีหลังไม่เห็นข้อความก่อนหน้า/)).toBeInTheDocument();
+    expect(screen.getByText(/เห็นหมายเลข IP ของเรา/)).toBeInTheDocument();
   });
 
   it('ล็อกอินอยู่ → ลิงก์กลับไปหน้า "ฉัน" · ตั้งช่องทางติดต่อไว้ → เปิดในแท็บใหม่', () => {

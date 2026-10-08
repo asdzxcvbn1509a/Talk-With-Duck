@@ -1,6 +1,7 @@
 // อ่านและตรวจค่าตัวแปรสภาพแวดล้อมทั้งหมดของ server ในที่เดียว (ข้อ 3.5.1 ข้อ 7)
 import 'dotenv/config';
 import { z } from 'zod';
+import { isPemCertificate } from '../utils/databaseUrl.js';
 import { parseEmailDomains } from '../utils/emailDomain.js';
 
 const optional = z
@@ -20,7 +21,10 @@ const schema = z.object({
   DATABASE_POOL_MAX: z.coerce.number().int().positive().default(5),
   // 'true' = ใช้ SSL (Supabase) · ใส่ DATABASE_SSL_CA เพื่อตรวจใบรับรองแบบเต็ม
   DATABASE_SSL: z.enum(['true', 'false']).default('false'),
-  DATABASE_SSL_CA: optional,
+  DATABASE_SSL_CA: optional.refine(
+    (v) => v === undefined || isPemCertificate(v),
+    'DATABASE_SSL_CA ต้องเป็นใบรับรองแบบ PEM ทั้งก้อน รวมบรรทัด BEGIN/END CERTIFICATE และขึ้นบรรทัดใหม่ตามไฟล์ (ดู docs/deploy.md ข้อ 3)',
+  ),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET ต้องยาวอย่างน้อย 32 ตัวอักษร'),
   ACCESS_TOKEN_TTL: z.string().default('15m'),

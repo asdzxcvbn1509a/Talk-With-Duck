@@ -7,6 +7,7 @@
 - [socket-events.md](socket-events.md): event ของ Socket.IO และลำดับการต่อเสียง WebRTC
 - [database.md](database.md): ตารางในฐานข้อมูลและแผนภาพ ER
 - [deploy.md](deploy.md): การนำขึ้น Supabase + Render + Vercel
+- [security.md](security.md): ระบบป้องกันอะไรไว้แล้ว ผลการตรวจความปลอดภัย และกติกาเวลาเพิ่มโค้ด
 
 แผนภาพในไฟล์นี้เขียนด้วย Mermaid ซึ่ง GitHub แสดงเป็นรูปให้เอง (ใน VS Code ต้องลงส่วนขยายที่แสดง Mermaid ได้)
 
@@ -244,7 +245,10 @@ flowchart LR
    - ถ้าต่างจากรูปเล่ม เพิ่มใน [report-changes.md](report-changes.md)
 
 **เพิ่ม socket event:**
-- **ฝั่งรับจาก client:** เพิ่มใน `realtime/index.js` ตรวจ payload ก่อนใช้ และตอบผ่าน `ack`
+- **ฝั่งรับจาก client:** เพิ่มใน `realtime/index.js` ด้วย `listen(socket, 'ชื่อ:event', async (payload, ack) => { … })` (ESLint ห้ามใช้ `socket.on` ตรง ๆ)
+  - `listen` ให้ payload เป็น object เสมอ ให้ `ack` ที่เรียกได้เสมอ และจับ error ให้ (error ที่หลุดจาก listener ของ socket.io ทำให้ server ล่มทั้งตัว)
+  - ยังต้องตรวจค่าใน payload เองก่อนใช้ เช่น เป็น UUID หรือเป็นเพลงในคิวจริง แล้วตอบผ่าน `ack`
+  - ไม่มีสิทธิ์หรือไม่เจอ ให้ `throw forbidden(...)` / `notFound(...)` แล้ว `listen` จะตอบ `{ ok: false, code, message }` ให้เอง
 - **ฝั่งส่งจาก server:** เรียก `emitTo…` จาก service
 - **ฝั่งหน้าเว็บ:** รับใน `lib/roomSession.js` (event ของห้อง) หรือใน hook
 - อัปเดต [socket-events.md](socket-events.md) และเพิ่มเทสต์ใน `realtime.test.js`
